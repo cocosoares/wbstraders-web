@@ -90,7 +90,7 @@ function CrossSell({ inCartIds }: { inCartIds: Set<string> }) {
             key={product.id}
             className="flex items-center gap-3 rounded-xl border border-cream-300 bg-cream-50 p-2.5"
           >
-            <div className="h-14 w-9 shrink-0">
+            <div className="flex h-14 w-9 shrink-0 items-end justify-center rounded-md bg-gradient-to-b from-olive-900 to-ink-900">
               <BottleArt product={product} className="h-14" />
             </div>
             <div className="min-w-0 flex-1">
@@ -206,7 +206,7 @@ export function CartDrawer() {
                             key={product.id}
                             className="flex items-center gap-3 rounded-xl border border-cream-300 bg-cream-50 p-3"
                           >
-                            <div className="h-16 w-10 shrink-0">
+                            <div className="flex h-16 w-10 shrink-0 items-end justify-center rounded-md bg-gradient-to-b from-olive-900 to-ink-900">
                               <BottleArt product={product} className="h-16" />
                             </div>
                             <div className="min-w-0 flex-1">

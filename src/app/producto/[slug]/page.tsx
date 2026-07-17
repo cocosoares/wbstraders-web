@@ -79,7 +79,7 @@ export default async function ProductPage({
               {product.badge}
             </span>
           )}
-          <div className="flex h-[28rem] items-end justify-center rounded-t-full bg-olive-50 px-10 pt-12 sm:h-[32rem]">
+          <div className="flex h-[28rem] items-end justify-center rounded-2xl bg-gradient-to-b from-olive-900 to-ink-900 px-10 pt-12 sm:h-[32rem]">
             <BottleArt product={product} className="h-96 sm:h-[26rem]" priority />
           </div>
         </div>

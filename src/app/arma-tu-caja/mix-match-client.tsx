@@ -160,7 +160,7 @@ export function MixMatchClient() {
                 key={product.id}
                 className="flex items-center gap-4 rounded-xl border border-cream-300 bg-cream-50 p-4"
               >
-                <div className="h-20 w-12 shrink-0">
+                <div className="flex h-20 w-12 shrink-0 items-end justify-center rounded-md bg-gradient-to-b from-olive-900 to-ink-900">
                   <BottleArt product={product} className="h-20" />
                 </div>
                 <div className="min-w-0 flex-1">

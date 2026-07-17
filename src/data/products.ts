@@ -31,7 +31,7 @@ export const PRODUCTS: Product[] = [
     badge: "Más vendido",
     regularUnitCents: toCents(134.9),
     pricingGroup: "livvera-tintas",
-    image: "/products/livvera-tintas.webp",
+    image: "/products/livvera-tintas.png",
     tiers: [
       t(1, 86.64, "Precio oferta"),
       t(3, 231.9, "Pack x3"),
@@ -55,7 +55,7 @@ export const PRODUCTS: Product[] = [
     pairings: ["Asado de tira", "Anticuchos", "Carnes rojas"],
     regularUnitCents: toCents(134.9),
     pricingGroup: "livvera-tintas",
-    image: "/products/livvera-tintas.webp",
+    image: "/products/livvera-tintas.png",
     tiers: [
       t(1, 86.64, "Precio oferta"),
       t(3, 231.9, "Pack x3"),
@@ -80,7 +80,7 @@ export const PRODUCTS: Product[] = [
     pairings: ["Pizza", "Pastas en salsa roja", "Piqueos criollos"],
     regularUnitCents: toCents(134.9),
     pricingGroup: "livvera-mix",
-    image: "/products/livvera-mix.webp",
+    image: "/products/livvera-mix.png",
     tiers: [
       t(1, 86.9, "Precio oferta"),
       t(3, 231.9, "Pack x3"),
@@ -103,7 +103,7 @@ export const PRODUCTS: Product[] = [
     pairings: ["Tiradito", "Causa limeña", "Comida nikkei"],
     regularUnitCents: toCents(134.9),
     pricingGroup: "livvera-mix",
-    image: "/products/livvera-mix.webp",
+    image: "/products/livvera-mix.png",
     tiers: [
       t(1, 86.9, "Precio oferta"),
       t(3, 231.9, "Pack x3"),
@@ -126,7 +126,7 @@ export const PRODUCTS: Product[] = [
     pairings: ["Piqueos", "Poke y nikkei", "Tarde de terraza"],
     regularUnitCents: toCents(134.9),
     pricingGroup: "livvera-mix",
-    image: "/products/livvera-mix.webp",
+    image: "/products/livvera-mix.png",
     tiers: [
       t(1, 86.9, "Precio oferta"),
       t(3, 231.9, "Pack x3"),
@@ -153,7 +153,7 @@ export const PRODUCTS: Product[] = [
     badge: "Para celebrar",
     regularUnitCents: toCents(114.9),
     pricingGroup: "ambrosia-brut",
-    image: "/products/finca-ambrosia-brut-nature.webp",
+    image: "/products/finca-ambrosia-brut-nature.png",
     tiers: [
       t(1, 114.9),
       t(2, 147.9, "Precio oferta x2"),
@@ -176,7 +176,7 @@ export const PRODUCTS: Product[] = [
     pairings: ["Ceviche", "Conchas a la parmesana", "Ensaladas frescas"],
     regularUnitCents: toCents(69.9),
     pricingGroup: "ambrosia-casa",
-    image: "/products/casa-sauvignon-blanc.webp",
+    image: "/products/casa-sauvignon-blanc.png",
     tiers: [
       t(1, 69.9),
       t(2, 89.9, "Precio oferta x2"),
@@ -201,7 +201,7 @@ export const PRODUCTS: Product[] = [
     pairings: ["Pollo a la brasa", "Hamburguesas", "Pastas"],
     regularUnitCents: toCents(69.9),
     pricingGroup: "ambrosia-casa",
-    image: "/products/casa-malbec.webp",
+    image: "/products/casa-malbec.png",
     tiers: [
       t(1, 69.9),
       t(2, 89.9, "Precio oferta x2"),
@@ -228,7 +228,7 @@ export const PRODUCTS: Product[] = [
     badge: "93–95 pts.",
     regularUnitCents: toCents(208.9),
     pricingGroup: "geografia",
-    image: "/products/geografia-extraordinaria-blancas-de-uco.webp",
+    image: "/products/geografia-extraordinaria-blancas-de-uco.png",
     tiers: [
       t(1, 134.9, "Precio oferta"),
       t(2, 240.9, "Pack x2"),
@@ -253,7 +253,7 @@ export const PRODUCTS: Product[] = [
     badge: "93–95 pts.",
     regularUnitCents: toCents(208.9),
     pricingGroup: "geografia",
-    image: "/products/geografia-extraordinaria-tintas-de-uco.webp",
+    image: "/products/geografia-extraordinaria-tintas-de-uco.png",
     tiers: [
       t(1, 134.9, "Precio oferta"),
       t(2, 240.9, "Pack x2"),
@@ -280,7 +280,7 @@ export const PRODUCTS: Product[] = [
     badge: "Ideal con ceviche",
     regularUnitCents: toCents(98.9),
     pricingGroup: "1700-torrontes",
-    image: "/products/1700-msnm-torrontes.webp",
+    image: "/products/1700-msnm-torrontes.png",
     tiers: [
       t(1, 98.9),
       t(2, 131.9, "Precio oferta x2"),
@@ -306,7 +306,7 @@ export const PRODUCTS: Product[] = [
     pairings: ["Lomo al jugo", "Costillas BBQ", "Risotto de hongos"],
     regularUnitCents: toCents(98.9),
     pricingGroup: "1700-tintas",
-    image: "/products/1700-msnm-malbec.webp",
+    image: "/products/1700-msnm-malbec.png",
     tiers: [
       t(1, 98.9),
       t(2, 131.9, "Precio oferta x2"),
@@ -332,7 +332,7 @@ export const PRODUCTS: Product[] = [
     pairings: ["Bife angosto", "Estofados", "Quesos intensos"],
     regularUnitCents: toCents(98.9),
     pricingGroup: "1700-tintas",
-    image: "/products/1700-msnm-cabernet-sauvignon.webp",
+    image: "/products/1700-msnm-cabernet-sauvignon.png",
     tiers: [
       t(1, 98.9),
       t(2, 131.9, "Precio oferta x2"),
@@ -359,7 +359,7 @@ export const PRODUCTS: Product[] = [
     badge: "Ícono de la casa",
     regularUnitCents: toCents(83.9),
     pricingGroup: "rn40",
-    image: "/products/rn40-malbec.webp",
+    image: "/products/rn40-malbec.png",
     tiers: [
       t(1, 83.9),
       t(2, 111.9, "Precio oferta x2"),

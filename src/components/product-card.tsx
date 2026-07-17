@@ -27,7 +27,7 @@ export function ProductCard({
     >
       <Link
         href={`/producto/${product.slug}`}
-        className="relative block bg-olive-50 px-6 pt-8 pb-4"
+        className="relative block bg-gradient-to-b from-olive-900 to-ink-900 px-6 pt-8 pb-4"
         aria-label={`Ver detalle de ${product.name}`}
       >
         {product.badge && (
@@ -35,7 +35,7 @@ export function ProductCard({
             {product.badge}
           </span>
         )}
-        <div className="mx-auto flex h-52 items-end justify-center rounded-t-full bg-cream-100/80 px-10 pt-6 transition-colors duration-300 group-hover:bg-cream-100">
+        <div className="mx-auto flex h-52 items-end justify-center px-10 pt-6">
           <BottleArt product={product} className="h-48" />
         </div>
       </Link>
