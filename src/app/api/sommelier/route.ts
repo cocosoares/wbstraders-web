@@ -35,30 +35,36 @@ function sanitizeMessages(input: unknown): ChatMessage[] | null {
   return messages;
 }
 
-async function askClaude(messages: ChatMessage[]): Promise<string> {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY ?? "",
-      "anthropic-version": "2023-06-01",
+async function askOpenRouter(messages: ChatMessage[]): Promise<string> {
+  const response = await fetch(
+    "https://openrouter.ai/api/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY ?? ""}`,
+        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "https://wbstraders.com",
+        "X-Title": "WBStraders Sommelier",
+      },
+      body: JSON.stringify({
+        model: process.env.SOMMELIER_MODEL ?? "google/gemini-3.1-flash-lite",
+        max_tokens: 600,
+        messages: [
+          { role: "system", content: SOMMELIER_SYSTEM_PROMPT },
+          ...messages,
+        ],
+      }),
+      signal: AbortSignal.timeout(25_000),
     },
-    body: JSON.stringify({
-      model: process.env.SOMMELIER_MODEL ?? "claude-sonnet-5",
-      max_tokens: 600,
-      system: SOMMELIER_SYSTEM_PROMPT,
-      messages,
-    }),
-    signal: AbortSignal.timeout(25_000),
-  });
+  );
 
   if (!response.ok) {
-    throw new Error(`Anthropic API respondió ${response.status}`);
+    throw new Error(`OpenRouter respondió ${response.status}`);
   }
   const data = (await response.json()) as {
-    content?: { type: string; text?: string }[];
+    choices?: { message?: { content?: string } }[];
   };
-  const text = data.content?.find((b) => b.type === "text")?.text;
+  const text = data.choices?.[0]?.message?.content;
   if (!text) throw new Error("Respuesta del modelo sin texto");
   return text;
 }
@@ -83,12 +89,12 @@ export async function POST(req: Request) {
 
   const lastUserMessage = messages[messages.length - 1].content;
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.OPENROUTER_API_KEY) {
     return NextResponse.json(localRecommend(lastUserMessage));
   }
 
   try {
-    const raw = await askClaude(messages);
+    const raw = await askOpenRouter(messages);
     return NextResponse.json(parseModelResponse(raw));
   } catch (error) {
     console.error("[sommelier] fallo del modelo, usando fallback local:", error);
