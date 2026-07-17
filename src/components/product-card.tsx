@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { BottleArt } from "@/components/bottle-art";
 import { bestUnitCents } from "@/lib/pricing";
-import { cn, formatPEN } from "@/lib/utils";
+import { cn, formatPEN, getWineBgGradient } from "@/lib/utils";
 import { useCart } from "@/hooks/use-cart";
 import type { Product } from "@/types";
 
@@ -27,7 +27,10 @@ export function ProductCard({
     >
       <Link
         href={`/producto/${product.slug}`}
-        className="relative block bg-gradient-to-b from-olive-900 to-ink-900 px-6 pt-8 pb-4"
+        className={cn(
+          "relative block bg-gradient-to-b px-6 pt-8 pb-4",
+          getWineBgGradient(product.type)
+        )}
         aria-label={`Ver detalle de ${product.name}`}
       >
         {product.badge && (

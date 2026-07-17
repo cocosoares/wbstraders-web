@@ -7,7 +7,7 @@ import { TierSelector } from "@/components/tier-selector";
 import { PRODUCTS, PRODUCTS_BY_SLUG, groupSiblings } from "@/data/products";
 import { SITE } from "@/data/site";
 import { bestUnitCents } from "@/lib/pricing";
-import { formatPEN } from "@/lib/utils";
+import { cn, formatPEN, getWineBgGradient } from "@/lib/utils";
 import type { Product } from "@/types";
 
 export function generateStaticParams() {
@@ -79,7 +79,10 @@ export default async function ProductPage({
               {product.badge}
             </span>
           )}
-          <div className="group flex h-[28rem] items-end justify-center rounded-2xl bg-gradient-to-b from-olive-900 to-ink-900 px-10 pt-12 sm:h-[32rem]">
+          <div className={cn(
+            "group flex h-[28rem] items-end justify-center rounded-2xl bg-gradient-to-b px-10 pt-12 sm:h-[32rem]",
+            getWineBgGradient(product.type)
+          )}>
             <FloatingBottle
               product={product}
               priority
