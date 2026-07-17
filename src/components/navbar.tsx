@@ -11,7 +11,7 @@ import { useCart } from "@/hooks/use-cart";
 const NAV_LINKS = [
   { href: "/catalogo", label: "Catálogo" },
   { href: "/arma-tu-caja", label: "Arma tu caja" },
-  { href: "/#bodegas", label: "Bodegas" },
+  { href: "/bodegas", label: "Bodegas" },
   { href: "/#delivery", label: "Delivery" },
   { href: "/#contacto", label: "Contacto" },
 ];

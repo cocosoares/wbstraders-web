@@ -7,6 +7,7 @@ const SHOP_LINKS = [
   { href: "/catalogo?tipo=Tinto", label: "Vinos tintos" },
   { href: "/catalogo?tipo=Blanco", label: "Vinos blancos" },
   { href: "/arma-tu-caja", label: "Arma tu caja" },
+  { href: "/bodegas", label: "Nuestras bodegas" },
 ];
 
 const HELP_LINKS = [

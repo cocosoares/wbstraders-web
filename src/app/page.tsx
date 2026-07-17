@@ -14,6 +14,9 @@ import { Reveal } from "@/components/reveal";
 import { AskSommelierButton } from "@/components/sommelier-widget";
 import { DELIVERY_ZONES } from "@/data/delivery-zones";
 import { BRANDS, PRODUCTS_BY_ID } from "@/data/products";
+import { WINERIES } from "@/data/wineries";
+
+const WINERIES_BY_NAME = new Map(WINERIES.map((w) => [w.name, w.slug]));
 import { SITE } from "@/data/site";
 import { formatPEN } from "@/lib/utils";
 
@@ -135,7 +138,7 @@ function Brands() {
         {BRANDS.map((brand, index) => (
           <Reveal key={brand.name} delay={index * 0.1}>
             <Link
-              href={`/catalogo?bodega=${encodeURIComponent(brand.name)}`}
+              href={`/bodegas/${WINERIES_BY_NAME.get(brand.name) ?? ""}`}
               className="group block h-full rounded-2xl border border-cream-300 bg-cream-50 p-7 transition-shadow duration-300 hover:shadow-xl hover:shadow-ink-900/5"
             >
               <h3 className="font-display text-2xl font-semibold transition-colors duration-200 group-hover:text-wine-600">
@@ -148,7 +151,7 @@ function Brands() {
                 {brand.blurb}
               </p>
               <span className="mt-5 inline-block text-sm font-semibold text-olive-600 transition-colors duration-200 group-hover:text-olive-700">
-                Ver vinos →
+                Conocer la bodega →
               </span>
             </Link>
           </Reveal>
