@@ -37,28 +37,28 @@ export interface BottleInfo {
 
 export const BOTTLES: BottleInfo[] = [
   {
-    image: "bottles/livvera-tintas.png",
+    image: "bottles/livvera-tintas.webp",
     name: "Livverá Malbec",
     brand: "Escala Humana",
     price: "Desde S/ 62",
     note: "Mínima intervención · Gualtallary",
   },
   {
-    image: "bottles/rn40-malbec.png",
+    image: "bottles/rn40-malbec.webp",
     name: "RN40 Malbec",
     brand: "Viñas en Flor",
     price: "Desde S/ 38",
     note: "Ícono de la casa · Cafayate",
   },
   {
-    image: "bottles/1700-msnm-torrontes.png",
+    image: "bottles/1700-msnm-torrontes.webp",
     name: "1700 msnm Torrontés",
     brand: "Viñas en Flor",
     price: "Desde S/ 45",
     note: "Ideal con ceviche · 1,700 msnm",
   },
   {
-    image: "bottles/finca-ambrosia-brut-nature.png",
+    image: "bottles/finca-ambrosia-brut-nature.webp",
     name: "Brut Nature",
     brand: "Finca Ambrosía",
     price: "Desde S/ 51",

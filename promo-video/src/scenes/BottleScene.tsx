@@ -28,10 +28,23 @@ export const BottleScene: React.FC<{ bottle: BottleInfo; bg: string }> = ({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
+  // Animación de entrada de la botella
   const bottleProgress = spring({ frame, fps, config: { damping: 16 } });
   const bottleY = interpolate(bottleProgress, [0, 1], [140, 0]);
   const bottleOpacity = interpolate(bottleProgress, [0, 1], [0, 1]);
 
+  // Efecto de flotación continua (float) y rotación orgánica
+  const floatOffset = Math.sin(frame / 12) * 12;
+  const scale = interpolate(bottleProgress, [0, 1], [0.8, 1]) * (1 + Math.sin(frame / 20) * 0.012);
+  const rotate = interpolate(bottleProgress, [0, 1], [-8, 0]) + Math.cos(frame / 16) * 1.5;
+
+  // Sombra física dinámica en base a la altura de la botella
+  // Cuando flota más arriba (floatOffset negativo), la sombra es más pequeña y tenue.
+  // Cuando baja (floatOffset positivo), la sombra es más grande y oscura.
+  const shadowScale = interpolate(floatOffset, [-12, 12], [0.75, 1.05]);
+  const shadowOpacity = interpolate(floatOffset, [-12, 12], [0.25, 0.45]);
+
+  // Animaciones de texto y precio
   const textProgress = spring({
     frame: frame - 14,
     fps,
@@ -54,6 +67,19 @@ export const BottleScene: React.FC<{ bottle: BottleInfo; bg: string }> = ({
         justifyContent: "center",
       }}
     >
+      {/* Detalle decorativo de fondo - Círculo de luz suave detrás de la botella */}
+      <div
+        style={{
+          position: "absolute",
+          width: 600,
+          height: 600,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(255, 250, 240, 0.08) 0%, rgba(255,250,240,0) 70%)",
+          transform: "scale(1.5)",
+          pointerEvents: "none",
+        }}
+      />
+
       <div
         style={{
           position: "absolute",
@@ -70,16 +96,45 @@ export const BottleScene: React.FC<{ bottle: BottleInfo; bg: string }> = ({
         {bottle.brand}
       </div>
 
+      {/* Contenedor animado de la Botella + Sombra */}
       <div
         style={{
-          transform: `translateY(${bottleY}px)`,
+          transform: `translateY(${bottleY + floatOffset}px) scale(${scale}) rotate(${rotate}deg)`,
+          transformOrigin: "bottom center",
           opacity: bottleOpacity,
           height: 900,
           display: "flex",
-          alignItems: "flex-end",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          position: "relative",
+          paddingBottom: 20,
         }}
       >
-        <Img src={staticFile(bottle.image)} style={{ height: 850 }} />
+        {/* Botella */}
+        <Img 
+          src={staticFile(bottle.image)} 
+          style={{ 
+            height: 850, 
+            zIndex: 2,
+            filter: "drop-shadow(0 15px 25px rgba(0,0,0,0.3))" 
+          }} 
+        />
+        
+        {/* Sombra de contacto física y dinámica */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 12,
+            width: 280,
+            height: 20,
+            background: "radial-gradient(ellipse at center, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 70%)",
+            transform: `scale(${shadowScale})`,
+            opacity: shadowOpacity * bottleOpacity,
+            zIndex: 1,
+            pointerEvents: "none",
+          }}
+        />
       </div>
 
       <div
