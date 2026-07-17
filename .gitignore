@@ -11,3 +11,8 @@ build/
 *.tsbuildinfo
 next-env.d.ts
 .DS_Store
+
+# Herramientas externas (no parte del proyecto)
+.claude-code-history/
+.codex-history/
+graphify-out/

@@ -8,7 +8,7 @@ import {
   Store,
   Truck,
 } from "lucide-react";
-import { BottleArt } from "@/components/bottle-art";
+import { FloatingBottle } from "@/components/floating-bottle";
 import { ProductCard } from "@/components/product-card";
 import { Reveal } from "@/components/reveal";
 import { AskSommelierButton } from "@/components/sommelier-widget";
@@ -106,15 +106,13 @@ function Hero() {
         <Reveal delay={0.15} className="hidden md:block">
           <div className="relative mx-auto flex h-96 max-w-sm items-end justify-center gap-4 rounded-t-full bg-olive-800/60 px-10 pt-10">
             {heroBottles.map((product, index) => (
-              <div
+              <FloatingBottle
                 key={product.id}
+                product={product}
+                delay={index * 0.6}
+                priority={index === 1}
                 className={index === 1 ? "h-80" : "h-64"}
-              >
-                <BottleArt
-                  product={product}
-                  className={index === 1 ? "h-80" : "h-64"}
-                />
-              </div>
+              />
             ))}
           </div>
         </Reveal>

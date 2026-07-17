@@ -36,7 +36,10 @@ export function ProductCard({
           </span>
         )}
         <div className="mx-auto flex h-52 items-end justify-center px-10 pt-6">
-          <BottleArt product={product} className="h-48" />
+          <BottleArt
+            product={product}
+            className="h-48 drop-shadow-lg transition-transform duration-300 ease-out group-hover:-translate-y-2 group-hover:scale-[1.04]"
+          />
         </div>
       </Link>
 

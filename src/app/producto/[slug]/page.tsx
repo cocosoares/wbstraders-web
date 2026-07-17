@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Award, Grape, MapPin, Mountain } from "lucide-react";
-import { BottleArt } from "@/components/bottle-art";
+import { FloatingBottle } from "@/components/floating-bottle";
 import { ProductCard } from "@/components/product-card";
 import { TierSelector } from "@/components/tier-selector";
 import { PRODUCTS, PRODUCTS_BY_SLUG, groupSiblings } from "@/data/products";
@@ -79,8 +79,12 @@ export default async function ProductPage({
               {product.badge}
             </span>
           )}
-          <div className="flex h-[28rem] items-end justify-center rounded-2xl bg-gradient-to-b from-olive-900 to-ink-900 px-10 pt-12 sm:h-[32rem]">
-            <BottleArt product={product} className="h-96 sm:h-[26rem]" priority />
+          <div className="group flex h-[28rem] items-end justify-center rounded-2xl bg-gradient-to-b from-olive-900 to-ink-900 px-10 pt-12 sm:h-[32rem]">
+            <FloatingBottle
+              product={product}
+              priority
+              className="h-96 sm:h-[26rem]"
+            />
           </div>
         </div>
 
