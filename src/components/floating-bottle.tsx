@@ -92,13 +92,13 @@ export function FloatingBottle({
           transformStyle: "preserve-3d",
           perspective: 1000,
         }}
-        className="relative flex items-end justify-center cursor-pointer select-none"
+        className="relative flex h-full items-end justify-center cursor-pointer select-none"
       >
         {/* Glow de fondo de la botella */}
         <div className="absolute inset-0 -z-10 rounded-full bg-radial from-cream-100/10 to-transparent blur-xl pointer-events-none opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         
         {/* La botella con desplazamiento Z de 3D */}
-        <div style={{ transform: "translateZ(30px)" }} className="relative flex items-end justify-center">
+        <div style={{ transform: "translateZ(30px)" }} className="relative flex h-full w-auto items-end justify-center">
           <BottleArt product={product} className="h-full w-auto drop-shadow-2xl" priority={priority} />
         </div>
 
