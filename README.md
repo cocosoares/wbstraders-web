@@ -11,6 +11,7 @@ Tienda D2C y operación comercial para WBStraders, importadora boutique de vinos
 - Pago coordinado: crea pedidos pendientes y solo un administrador puede conciliarlos contra un abono real, con monto exacto y trazabilidad.
 - `/admin` como CRM operativo para pedidos, clientes, inventario, oportunidades, reclamos y comprobantes.
 - Integración de webhooks YCloud y consentimiento de marketing trazable.
+- Email transaccional con Resend, cola durable, reintentos, webhook firmado y contactos comerciales con consentimiento.
 - Sommelier con OpenRouter, fallback local, validación y rate limit.
 - Consentimiento previo a GA4/GTM y eventos sin PII.
 - Páginas de privacidad, términos, envíos/cambios y Libro de Reclamaciones.
@@ -46,7 +47,7 @@ npm run render
 
 `.env.example` documenta todas las variables. Principios obligatorios:
 
-- `SUPABASE_SERVICE_ROLE_KEY`, `MERCADOPAGO_ACCESS_TOKEN` y secretos de webhook son solo de servidor.
+- `SUPABASE_SERVICE_ROLE_KEY`, `MERCADOPAGO_ACCESS_TOKEN`, `RESEND_API_KEY` y secretos de webhook son solo de servidor.
 - `PAYMENT_PROVIDER=manual` sirve para desarrollo; no marca pedidos como pagados.
 - Producción requiere Supabase con backups, migraciones aplicadas y RLS activa.
 - Si GA4/GTM no está configurado o el visitante no consiente, no se carga analítica.
@@ -110,6 +111,19 @@ como su primer parámetro; el idioma se toma de `YCLOUD_TEMPLATE_LANGUAGE`.
 La entrega es al menos una vez: `externalId` permanece estable entre reintentos para
 reconciliar eventos del proveedor. No deben ejecutarse envíos manuales sobre filas
 en estado `processing`.
+
+## Email con Resend
+
+Los eventos de pedido, pago, despacho, comprobante y Libro de Reclamaciones se
+registran en `email_outbox`. Un cron invoca `POST /api/email/outbox` con
+`Authorization: Bearer $CRON_SECRET`; el worker usa claves de idempotencia estables,
+lease y reintentos. `POST /api/resend/webhook` verifica la firma Svix/Resend,
+reconcilia entregas y suprime direcciones con rebote o queja.
+
+Los contactos comerciales solo se sincronizan cuando existe un registro de
+consentimiento. El envío transaccional y la sincronización comercial tienen
+interruptores separados. La configuración completa y el procedimiento de prueba
+están en [docs/resend-email-operations.md](docs/resend-email-operations.md).
 
 ## Caducidad de reservas
 

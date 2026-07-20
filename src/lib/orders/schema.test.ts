@@ -18,6 +18,15 @@ describe("createOrderSchema", () => {
     expect(parsed.customer.email).toBe("test@example.com");
   });
 
+  it("requires an email for transactional order updates", () => {
+    expect(
+      createOrderSchema.safeParse({
+        ...base,
+        customer: { name: "Cliente Prueba", phone: "+51 999 888 777" },
+      }).success,
+    ).toBe(false);
+  });
+
   it("requires complete fiscal identity for factura", () => {
     expect(
       createOrderSchema.safeParse({ ...base, fiscal: { receiptType: "factura", documentType: "ruc", documentNumber: "123" } })

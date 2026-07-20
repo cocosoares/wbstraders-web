@@ -47,6 +47,11 @@
 - [ ] Configurar `CRON_SECRET` y programar `POST /api/ycloud/outbox` con Bearer; alertar respuestas no 2xx.
 - [ ] Programar `POST /api/maintenance/reservations` con el mismo Bearer al menos cada cinco minutos; alertar respuestas no 2xx.
 - [ ] Aprobar la plantilla indicada por `YCLOUD_PAYMENT_CONFIRMED_TEMPLATE` y probar sus reintentos/webhooks.
+- [ ] Verificar un subdominio de envío en Resend con SPF y DKIM; configurar DMARC en el dominio organizacional.
+- [ ] Guardar `RESEND_API_KEY`, `RESEND_CONTACTS_API_KEY` y `RESEND_WEBHOOK_SECRET` solo en el servidor.
+- [ ] Aplicar la migración de email y programar `POST /api/email/outbox` cada minuto con Bearer.
+- [ ] Probar pedido, pago, preparación, reparto, entrega, comprobante y reclamo con destinatarios internos.
+- [ ] Confirmar que rebotes/quejas crean supresión y que marketing solo incluye consentimientos vigentes.
 
 ## Puerta de crecimiento
 

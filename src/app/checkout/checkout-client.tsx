@@ -60,8 +60,8 @@ function validate(form: FormState): FieldErrors {
   if (!/^9\d{8}$/.test(form.phone.trim())) {
     errors.phone = "Ingresa un celular peruano de 9 dígitos que empiece con 9.";
   }
-  if (form.email.trim() && !/^\S+@\S+\.\S+$/.test(form.email.trim())) {
-    errors.email = "Revisa el formato del correo.";
+  if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) {
+    errors.email = "Ingresa un correo válido para recibir la confirmación.";
   }
   if (!form.district) errors.district = "Elige el distrito de entrega.";
   if (form.address.trim().length < 5) {
@@ -214,7 +214,7 @@ export function CheckoutClient({
           customer: {
             name: form.name.trim(),
             phone: form.phone.trim(),
-            email: form.email.trim() || undefined,
+            email: form.email.trim(),
           },
           delivery: {
             district: form.district,
@@ -322,8 +322,8 @@ export function CheckoutClient({
               {fieldError("phone", errors)}
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="email" className="mb-1.5 block text-sm font-semibold">Correo <span className="font-normal text-ink-500">(para confirmación)</span></label>
-              <input id="email" type="email" value={form.email} onChange={(e) => setField("email", e.target.value)} className={inputClass} autoComplete="email" aria-invalid={!!errors.email} aria-describedby={errors.email ? "email-error" : undefined} />
+              <label htmlFor="email" className="mb-1.5 block text-sm font-semibold">Correo * <span className="font-normal text-ink-500">(confirmación y seguimiento)</span></label>
+              <input id="email" type="email" required value={form.email} onChange={(e) => setField("email", e.target.value)} className={inputClass} autoComplete="email" aria-invalid={!!errors.email} aria-describedby={errors.email ? "email-error" : undefined} />
               {fieldError("email", errors)}
             </div>
           </div>

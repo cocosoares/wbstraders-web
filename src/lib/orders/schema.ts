@@ -39,7 +39,7 @@ export const customerSchema = z.object({
     }
     return value;
   }),
-  email: z.string().trim().email().max(254).toLowerCase().optional(),
+  email: z.string().trim().email().max(254).toLowerCase(),
 });
 
 export const fiscalSchema = z
