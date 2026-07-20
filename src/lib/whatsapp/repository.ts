@@ -21,6 +21,16 @@ type RpcRow = {
   duplicate: boolean;
 };
 
+function isMissingGreenApiEventProvider(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const details = error as { code?: unknown; message?: unknown };
+  return (
+    details.code === "23514" &&
+    typeof details.message === "string" &&
+    details.message.includes("whatsapp_events_provider_check")
+  );
+}
+
 export async function recordWhatsAppInbound(
   db: SupabaseClient,
   input: {
@@ -47,15 +57,19 @@ export async function recordWhatsAppInbound(
   if (!row) throw new Error("whatsapp_inbound_not_recorded");
 
   if (!row.duplicate) {
-    const event = await db.from("whatsapp_events").insert({
+    const values = {
       provider: input.provider,
       provider_event_id: input.eventId,
       contact_id: row.contact_id,
       conversation_id: row.conversation_id,
       message_id: row.message_id,
       event_type: input.eventType,
-      payload: { messageKind: input.kind },
-    });
+      payload: { messageKind: input.kind, sourceProvider: input.provider },
+    };
+    let event = await db.from("whatsapp_events").insert(values);
+    if (input.provider === "greenapi" && isMissingGreenApiEventProvider(event.error)) {
+      event = await db.from("whatsapp_events").insert({ ...values, provider: "ycloud" });
+    }
     if (event.error && event.error.code !== "23505") throw event.error;
   }
 

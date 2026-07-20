@@ -57,6 +57,21 @@ export async function claimWebhookEvent(
   return { id: existing.data.id as string, duplicate: true };
 }
 
+/**
+ * Older production schemas did not yet include `greenapi` in the provider
+ * constraint. Keep inbound webhooks available while that additive migration is
+ * being rolled out, without masking unrelated database errors.
+ */
+export function isMissingGreenApiWebhookProvider(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const details = error as { code?: unknown; message?: unknown };
+  return (
+    details.code === "23514" &&
+    typeof details.message === "string" &&
+    details.message.includes("webhook_events_provider_check")
+  );
+}
+
 export async function finishWebhookEvent(
   db: SupabaseClient,
   id: string,

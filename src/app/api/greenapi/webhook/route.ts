@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
-import { claimWebhookEvent, finishWebhookEvent } from "@/lib/orders/webhooks";
+import {
+  claimWebhookEvent,
+  finishWebhookEvent,
+  isMissingGreenApiWebhookProvider,
+} from "@/lib/orders/webhooks";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { extractGreenApiMessage, greenApiEventSchema, verifyGreenApiWebhookSecret } from "@/lib/greenapi/webhook";
 import { respondToWhatsApp } from "@/lib/whatsapp/conversation";
@@ -43,8 +47,20 @@ export async function POST(request: Request) {
       eventType: event.typeWebhook,
       payload: event,
     });
-  } catch {
-    return NextResponse.json({ received: false }, { status: 500 });
+  } catch (error) {
+    if (!isMissingGreenApiWebhookProvider(error)) {
+      return NextResponse.json({ received: false }, { status: 500 });
+    }
+    try {
+      claim = await claimWebhookEvent(db, {
+        provider: "ycloud",
+        eventId,
+        eventType: event.typeWebhook,
+        payload: event,
+      });
+    } catch {
+      return NextResponse.json({ received: false }, { status: 500 });
+    }
   }
   if (claim.duplicate) return NextResponse.json({ received: true, duplicate: true });
 
