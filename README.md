@@ -1,103 +1,124 @@
-# WBStraders — Tienda online de vinos de autor
+# WBStraders — e-commerce de vinos de autor
 
-E-commerce D2C para **WBStraders** (importadora boutique de vinos argentinos en Lima, Perú), construido con Next.js 15 (App Router), TypeScript, Tailwind CSS v4, Zustand y Framer Motion.
+Tienda D2C y operación comercial para WBStraders, importadora boutique de vinos argentinos en Lima. Construida con Next.js 15, TypeScript, Tailwind CSS 4, Supabase, Zustand y Vitest.
 
-## Características
+## Capacidades
 
-- **Catálogo con escalas de precio reales** del catálogo oficial (x1, x2, x3, x4, x6, x12) con el motor de precios en `src/lib/pricing.ts`.
-- **Mix & Match ("Arma tu caja")**: los productos "y/o" de una misma línea comparten grupo de precios — las cantidades se suman entre cepas para alcanzar el descuento (ej. 2 Bonarda + 2 Malvasía + 2 Rosé = precio x6).
-- **Carrito con upsell/cross-sell**: nudge de siguiente escala ("agrega 2 más y baja a S/ X c/u"), barra de envío gratis y sugerencias complementarias.
-- **Sommelier IA** (`/api/sommelier`): usa la API de Anthropic (Claude) si hay `ANTHROPIC_API_KEY`; sin clave, funciona con un recomendador local por reglas (maridajes peruanos: ceviche → Torrontés, parrilla → RN40, etc.).
-- **Checkout peruano**: zonas de delivery por distrito (Zona 1 / Zona 2), Yape, Plin, transferencia BCP y confirmación del pedido por WhatsApp (sin backend de pagos, operativo desde el día 1).
-- **SEO**: metadata por página, JSON-LD (OnlineStore, Product/AggregateOffer, FAQPage), sitemap.xml, robots.txt.
-- **Legal Perú**: age gate 18+, advertencia Ley N.º 28681 y Libro de Reclamaciones virtual.
+- Catálogo con precios exactos por caja y mix & match por línea.
+- Carrito persistente y checkout invitado accesible.
+- Pedido creado antes de pagar, snapshots de precio y reservas de inventario.
+- Mercado Pago Checkout Pro por REST, retorno interno y webhook idempotente.
+- Pago coordinado: crea pedidos pendientes y solo un administrador puede conciliarlos contra un abono real, con monto exacto y trazabilidad.
+- `/admin` como CRM operativo para pedidos, clientes, inventario, oportunidades, reclamos y comprobantes.
+- Integración de webhooks YCloud y consentimiento de marketing trazable.
+- Sommelier con OpenRouter, fallback local, validación y rate limit.
+- Consentimiento previo a GA4/GTM y eventos sin PII.
+- Páginas de privacidad, términos, envíos/cambios y Libro de Reclamaciones.
+- Age gate y confirmación +18 en checkout.
 
-## Comandos
-
-```bash
-npm run dev     # desarrollo (http://localhost:3000)
-npm run build   # build de producción
-npm start       # servir producción
-npm test        # tests del motor de precios (vitest)
-```
-
-## Variables de entorno
-
-Copia `.env.example` a `.env.local`:
-
-| Variable | Descripción |
-|---|---|
-| `NEXT_PUBLIC_SITE_URL` | URL pública (SEO/sitemap). Ej: `https://www.wbstraders.com` |
-| `ANTHROPIC_API_KEY` | Clave de [console.anthropic.com](https://console.anthropic.com) para el Sommelier IA. Opcional: sin ella funciona el modo reglas. |
-| `SOMMELIER_MODEL` | Modelo Claude (default `claude-sonnet-5`). |
-
-## Estructura
-
-```
-src/
-├── app/                  # Páginas (App Router)
-│   ├── page.tsx          # Home: hero, bodegas, destacados, delivery, B2B, FAQ
-│   ├── catalogo/         # Tienda con filtros (tipo, bodega)
-│   ├── producto/[slug]/  # Ficha con selector de escalas + JSON-LD Product
-│   ├── arma-tu-caja/     # Mix & Match interactivo
-│   ├── checkout/         # One-page checkout → WhatsApp
-│   ├── libro-de-reclamaciones/
-│   └── api/sommelier/    # API del Sommelier IA (Claude + fallback local)
-├── components/           # Navbar, footer, cart drawer, age gate, widget IA…
-├── data/                 # products.ts (catálogo), delivery-zones.ts, site.ts
-├── hooks/use-cart.ts     # Carrito (Zustand + persistencia localStorage)
-└── lib/pricing.ts        # Motor de escalas de precio (testeado)
-```
-
-## Cómo actualizar el catálogo
-
-Todo el catálogo vive en `src/data/products.ts`. Cada producto tiene `tiers` con el precio EXACTO del pack en soles (`t(cantidad, precioPack, "etiqueta")`). Los productos "y/o" comparten `pricingGroup` para el mix & match.
-
-**Fotos reales**: ya están cargadas — extraídas del catálogo PDF oficial, optimizadas a WebP (~20-40 KB c/u) en `public/products/`. Para reemplazar alguna, coloca el archivo y actualiza `image: "/products/<archivo>.webp"` en el producto. Sin foto, se muestra una ilustración SVG generada por `BottleArt`.
-
-> **Nota**: se corrigió la marca de "Geografía Extraordinaria" a **Escala Humana** (la etiqueta real del catálogo dice "Escala Humana Wines", no Finca Ambrosía) y se citaron los críticos reales visibles en el catálogo: Vinous, Tim Atkin MW y Robert Parker/Wine Advocate (93–95 pts).
-
-## Despliegue
-
-### Opción A — Vercel (recomendada para Next.js)
-
-1. Sube el repo a GitHub y conéctalo en [vercel.com](https://vercel.com) (plan gratuito sirve para empezar).
-2. Configura las variables de entorno en el dashboard.
-3. En Hostinger (donde está tu dominio), apunta el DNS: registro `A` de `@` a `76.76.21.21` y `CNAME` de `www` a `cname.vercel-dns.com`. Esto se puede automatizar con el MCP `hostinger-dns` ya configurado en `.mcp.json`.
-
-### Opción B — VPS de Hostinger
-
-El plan de hosting compartido de Hostinger no ejecuta Node.js/SSR; necesitas un **VPS** (se puede crear/administrar con el MCP `hostinger-hosting`):
+## Desarrollo
 
 ```bash
-# En el VPS (Ubuntu):
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt install -y nodejs
-git clone <tu-repo> && cd wbstraders-web
-npm ci && npm run build
-npm i -g pm2
-pm2 start npm --name wbstraders -- start
-pm2 save && pm2 startup
-# Reverse proxy con Nginx/Caddy + SSL (certbot)
+npm install
+Copy-Item .env.example .env.local
+npm run dev
 ```
 
-### MCP de Hostinger
+Comandos de verificación:
 
-`.mcp.json` (ignorado por git, contiene tu token) registra 6 servidores MCP: hosting, domains, dns, billing, reach y ecommerce. **Reinicia Claude Code** en esta carpeta y verifica con `/mcp`. Con ellos puedes gestionar DNS del dominio, VPS y catálogos directamente desde el chat.
+```bash
+npm test
+npx tsc --noEmit
+npm run build
+npm audit
+```
 
-## Roadmap sugerido
+El proyecto de video está separado:
 
-1. **Pagos automáticos**: integrar Culqi o Izipay (tokenización de tarjetas + Yape con QR dinámico) en el checkout.
-2. **Pedidos en base de datos**: Supabase (PostgreSQL) para órdenes, stock y clientes; el diseño del carrito ya separa producto/escala para migrarlo directo.
-3. **Fotos profesionales** de botellas (reemplazan las ilustraciones SVG automáticamente).
-4. **Google Business Profile + Search Console**: alta del negocio, enviar sitemap.
-5. **Meta Ads / Google Shopping**: el JSON-LD de producto ya está listo para el feed de Merchant Center.
-6. **Club de suscripción** (ingresos recurrentes) y blog de maridajes para SEO.
-7. **Videos promocionales con Remotion**: Remotion genera videos programáticos (unboxing, promos para Instagram/Meta Ads) — es la herramienta correcta para video, no para animar la web (eso ya lo hace Framer Motion sin penalizar el rendimiento).
+```bash
+cd promo-video
+npm ci
+npx tsc --noEmit
+npm run render
+```
 
-## Marketing y SEO aplicados en el código
+## Configuración
 
-- Keywords locales en metadata: "delivery de vinos Lima", "comprar vino online Perú", nombres de bodegas.
-- FAQPage JSON-LD en el home (rich results de Google).
-- Product + AggregateOffer JSON-LD por producto (precio "desde", stock).
-- Validación B2B como prueba social ("la cava de tus restaurantes favoritos").
-- Técnicas de conversión: envío gratis por umbral, ancla de precio regular tachado, badge "ahorra S/ X", escasez amable en delivery ("pedidos antes de las 4 p. m. salen hoy").
+`.env.example` documenta todas las variables. Principios obligatorios:
+
+- `SUPABASE_SERVICE_ROLE_KEY`, `MERCADOPAGO_ACCESS_TOKEN` y secretos de webhook son solo de servidor.
+- `PAYMENT_PROVIDER=manual` sirve para desarrollo; no marca pedidos como pagados.
+- Producción requiere Supabase con backups, migraciones aplicadas y RLS activa.
+- Si GA4/GTM no está configurado o el visitante no consiente, no se carga analítica.
+- Nunca guardar tokens reales en `.codex/`, `.mcp.json` ni archivos versionados.
+
+## Base de datos
+
+Las migraciones viven en `supabase/migrations` y se aplican en orden. Ejecutarlas con Supabase CLI o desde el SQL Editor del proyecto correcto. El modelo separa los estados de pedido, pago, envío y comprobante; `inventory_ledger` es el historial contable del stock.
+
+## Pagos
+
+Flujo esperado:
+
+1. `POST /api/orders` valida productos y recalcula precios en servidor.
+2. Se crea el pedido y se reserva stock.
+3. Mercado Pago recibe `external_reference = order_id`.
+4. El navegador vuelve a `/pago/exito`, `/pago/pendiente` o `/pago/error`.
+5. Solo el webhook firmado y la consulta servidor-servidor pueden confirmar el pago.
+
+Las URLs de retorno y las capturas de pantalla no son prueba de pago.
+La solicitud exige `ageConfirmed: true` y `termsAccepted: true`; la aceptación
+de términos se registra como consentimiento con pedido y fecha, sin atribuir una
+versión legal mientras no exista una versión publicada explícita.
+
+Los pedidos con `payment_provider = manual` se concilian en `/admin/pedidos`.
+La función transaccional exige referencia única, monto idéntico al pedido, nota de
+verificación y operador autenticado. Si el pago existe pero el stock ya no está
+disponible, conserva la verdad financiera (`approved`) y deriva el despacho a una
+excepción sin crear una salida parcial de inventario.
+
+## Operación y lanzamiento
+
+- [Plan de medición](docs/tracking-plan.md)
+- [Modelo operativo](docs/operations.md)
+- [Checklist de producción](docs/production-checklist.md)
+- [Sistema de diseño](design-system/MASTER.md)
+
+Antes de aceptar pagos reales deben completarse razón social, RUC, domicilio, credenciales, reglas logísticas, costos/márgenes, stock y textos validados por asesor legal/contable.
+
+## Reclamos y comprobantes
+
+`/libro-de-reclamaciones` registra solicitudes privadas mediante el endpoint
+rate-limited `/api/consumer-claims` y devuelve un número de recepción. La bandeja
+`/admin/reclamos` enmascara el documento antes de renderizarlo. La migración 002
+debe aplicarse para habilitar este flujo; la publicación definitiva requiere
+validar el formulario, los textos y el procedimiento de respuesta con asesoría legal.
+
+El checkout crea una boleta o factura pendiente. `/admin/comprobantes` es una cola
+manual auditada para registrar el resultado real de SEE-SOL/PSE; no emite ni simula
+un comprobante ante SUNAT por sí misma.
+
+## Despacho de WhatsApp
+
+Los pagos aprobados crean una fila única en `notification_outbox`. Un cron debe
+invocar `POST /api/ycloud/outbox` con `Authorization: Bearer $CRON_SECRET`.
+El endpoint reclama hasta cinco filas por defecto mediante `FOR UPDATE SKIP LOCKED`,
+usa un lease de dos minutos y reintenta con backoff hasta cinco veces. La plantilla
+configurada en `YCLOUD_PAYMENT_CONFIRMED_TEMPLATE` debe aceptar el número de pedido
+como su primer parámetro; el idioma se toma de `YCLOUD_TEMPLATE_LANGUAGE`.
+
+La entrega es al menos una vez: `externalId` permanece estable entre reintentos para
+reconciliar eventos del proveedor. No deben ejecutarse envíos manuales sobre filas
+en estado `processing`.
+
+## Caducidad de reservas
+
+Un segundo cron debe invocar `POST /api/maintenance/reservations` con el mismo
+Bearer. El endpoint procesa hasta 500 pedidos con reservas vencidas por defecto
+(máximo 1000) mediante
+`FOR UPDATE SKIP LOCKED`, las marca `expired` y cambia a `unfulfilled` los pedidos
+que continúan impagos. Programarlo al menos cada cinco minutos.
+
+## Seguridad
+
+`.codex/`, `.mcp.json`, `.env` y variantes locales están ignorados. El token de Hostinger que apareció en el historial anterior debe rotarse desde la cuenta; excluirlo de Git evita nuevas filtraciones, pero no revoca la credencial ya expuesta.

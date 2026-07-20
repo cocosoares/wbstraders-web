@@ -11,6 +11,7 @@ interface CartState {
   setQty: (productId: string, qty: number) => void;
   remove: (productId: string) => void;
   clear: () => void;
+  replace: (items: Record<string, number>) => void;
   openCart: () => void;
   closeCart: () => void;
 }
@@ -42,6 +43,18 @@ export const useCart = create<CartState>()(
           return { items: rest };
         }),
       clear: () => set({ items: {} }),
+      replace: (items) =>
+        set({
+          items: Object.fromEntries(
+            Object.entries(items).filter(
+              ([productId, quantity]) =>
+                PRODUCTS_BY_ID.has(productId) &&
+                Number.isInteger(quantity) &&
+                quantity > 0 &&
+                quantity <= 24,
+            ),
+          ),
+        }),
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
     }),

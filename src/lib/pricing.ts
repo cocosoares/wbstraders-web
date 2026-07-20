@@ -35,6 +35,23 @@ export function lineTotalCents(tier: PriceTier, qty: number): number {
   return Math.round((tier.packTotalCents * qty) / tier.minQty);
 }
 
+/**
+ * Compone una cantidad usando únicamente packs publicados. Las botellas que
+ * exceden un pack no heredan por prorrateo un descuento que el catálogo no
+ * definió (ej.: x3 + x1 para cuatro botellas).
+ */
+export function discreteTotalCents(tiers: PriceTier[], qty: number): number {
+  let remaining = Math.max(0, Math.floor(qty));
+  let total = 0;
+  for (const tier of [...tiers].sort((a, b) => b.minQty - a.minQty)) {
+    const packs = Math.floor(remaining / tier.minQty);
+    if (packs === 0) continue;
+    total += packs * tier.packTotalCents;
+    remaining -= packs * tier.minQty;
+  }
+  return total;
+}
+
 /** Menor precio unitario alcanzable de un producto (para "Desde S/ ..."). */
 export function bestUnitCents(product: Product): number {
   return Math.min(...product.tiers.map(tierUnitCents));
@@ -65,11 +82,11 @@ function priceGroup(groupId: string, lines: CartLine[]): GroupPricing {
   const qty = lines.reduce((acc, l) => acc + l.qty, 0);
   const tiers = lines[0].product.tiers;
   const tier = tierForQty(tiers, qty);
-  const subtotalCents = lineTotalCents(tier, qty);
-  const regularCents = lines.reduce(
-    (acc, l) => acc + l.product.regularUnitCents * l.qty,
-    0,
-  );
+  const subtotalCents = discreteTotalCents(tiers, qty);
+  // La referencia de ahorro es el precio x1 realmente disponible en el sitio,
+  // no un PVP teórico que el cliente podría no haber visto ni pagado.
+  const singleUnitCents = tierUnitCents(tiers[0]);
+  const regularCents = singleUnitCents * qty;
   const upcoming = nextTier(tiers, qty);
 
   return {
@@ -78,7 +95,7 @@ function priceGroup(groupId: string, lines: CartLine[]): GroupPricing {
     lines,
     qty,
     tier,
-    unitCents: tierUnitCents(tier),
+    unitCents: qty > 0 ? Math.round(subtotalCents / qty) : 0,
     subtotalCents,
     regularCents,
     savingsCents: Math.max(0, regularCents - subtotalCents),

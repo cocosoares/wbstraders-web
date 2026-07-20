@@ -4,7 +4,7 @@ import { MixMatchClient } from "./mix-match-client";
 export const metadata: Metadata = {
   title: "Arma tu caja — Mix & Match de vinos",
   description:
-    "Combina cepas de una misma línea (Livverá, Casa, 1700 msnm, Geografía Extraordinaria) y paga el precio del pack completo. Hasta 50% de descuento por botella con delivery en Lima.",
+    "Combina cepas de una misma línea (Livverá, Casa, 1700 msnm, Geografía Extraordinaria) y accede al precio exacto de caja con delivery en Lima.",
 };
 
 export default function MixMatchPage() {

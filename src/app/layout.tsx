@@ -1,12 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
-import { AgeGate } from "@/components/age-gate";
-import { CartDrawer } from "@/components/cart-drawer";
-import { Footer } from "@/components/footer";
-import { Navbar } from "@/components/navbar";
 import { Providers } from "@/components/providers";
-import { SommelierWidget } from "@/components/sommelier-widget";
+import { SiteShell } from "@/components/site-shell";
 import { SITE } from "@/data/site";
 
 const playfair = Playfair_Display({
@@ -65,7 +61,7 @@ const ORGANIZATION_JSONLD = {
   email: SITE.email,
   telephone: SITE.phones[0],
   areaServed: "Lima, Perú",
-  paymentAccepted: "Yape, Plin, Transferencia bancaria, Tarjeta de crédito",
+  paymentAccepted: "Pago online seguro o pago coordinado",
   currenciesAccepted: "PEN",
 };
 
@@ -82,12 +78,7 @@ export default function RootLayout({
           }}
         />
         <Providers>
-          <Navbar />
-          <main>{children}</main>
-          <Footer />
-          <CartDrawer />
-          <SommelierWidget />
-          <AgeGate />
+          <SiteShell>{children}</SiteShell>
         </Providers>
       </body>
     </html>

@@ -13,7 +13,7 @@ const { fontFamily: inter } = loadInter("normal", {
   subsets: ["latin"],
 });
 
-const PAYMENTS = ["Yape", "Plin", "Tarjetas", "BCP"];
+const PAYMENTS = ["Pago seguro", "Pedido trazable", "Delivery Lima", "+18"];
 
 export const CTAScene: React.FC = () => {
   const frame = useCurrentFrame();

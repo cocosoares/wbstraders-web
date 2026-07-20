@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PRODUCTS_BY_ID } from "@/data/products";
 import {
   bestUnitCents,
+  discreteTotalCents,
   lineTotalCents,
   nextTier,
   priceCart,
@@ -40,11 +41,10 @@ describe("lineTotalCents", () => {
     expect(lineTotalCents(x12, 12)).toBe(53990); // S/ 539.90 exacto
   });
 
-  it("prorratea cantidades intermedias sobre la escala alcanzada", () => {
+  it("no inventa descuentos para cantidades intermedias", () => {
     const livvera = get("livvera-malbec");
-    const x3 = tierForQty(livvera.tiers, 4);
-    // 4 botellas al precio de la escala x3: 23190 * 4 / 3 = 30920
-    expect(lineTotalCents(x3, 4)).toBe(30920);
+    // Cuatro botellas se componen como pack x3 + una botella x1.
+    expect(discreteTotalCents(livvera.tiers, 4)).toBe(23190 + 8664);
   });
 });
 
@@ -58,8 +58,8 @@ describe("priceCart (grupos y/o compartidos)", () => {
     expect(pricing.groups).toHaveLength(1);
     expect(pricing.groups[0].qty).toBe(6);
     expect(pricing.groups[0].subtotalCents).toBe(39990); // S/ 399.90 catálogo
-    // Ahorro vs regular: 6 * 13490 - 39990 = 40950
-    expect(pricing.savingsCents).toBe(40950);
+    // Ahorro verificable vs precio x1 publicado: 6 * 8690 - 39990 = 12150
+    expect(pricing.savingsCents).toBe(12150);
   });
 
   it("no mezcla escalas entre grupos distintos", () => {

@@ -4,6 +4,7 @@ import {
   localRecommend,
   parseModelResponse,
 } from "@/lib/sommelier";
+import { consumeRateLimit } from "@/lib/rate-limit";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -12,6 +13,7 @@ interface ChatMessage {
 
 const MAX_MESSAGES = 12;
 const MAX_LENGTH = 1000;
+const MAX_BODY_BYTES = 32_000;
 
 /** Valida la entrada en el borde del sistema: nunca confiar en el cliente. */
 function sanitizeMessages(input: unknown): ChatMessage[] | null {
@@ -47,7 +49,10 @@ async function askOpenRouter(messages: ChatMessage[]): Promise<string> {
         "X-Title": "WBStraders Sommelier",
       },
       body: JSON.stringify({
-        model: process.env.SOMMELIER_MODEL ?? "google/gemini-3.1-flash-lite",
+        model:
+          process.env.OPENROUTER_MODEL ??
+          process.env.SOMMELIER_MODEL ??
+          "google/gemini-3.1-flash-lite",
         max_tokens: 600,
         messages: [
           { role: "system", content: SOMMELIER_SYSTEM_PROMPT },
@@ -70,11 +75,44 @@ async function askOpenRouter(messages: ChatMessage[]): Promise<string> {
 }
 
 export async function POST(req: Request) {
+  const forwardedFor = req.headers.get("x-forwarded-for");
+  const clientKey = forwardedFor?.split(",")[0]?.trim() || "unknown";
+  const limit = consumeRateLimit(`sommelier:${clientKey}`, 10, 60_000);
+  const rateHeaders = {
+    "X-RateLimit-Limit": "10",
+    "X-RateLimit-Remaining": String(limit.remaining),
+    "X-RateLimit-Reset": String(Math.ceil(limit.resetAt / 1000)),
+  };
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Demasiadas consultas. Intenta nuevamente en un minuto." },
+      { status: 429, headers: rateHeaders },
+    );
+  }
+
+  const contentLength = Number(req.headers.get("content-length") ?? "0");
+  if (contentLength > MAX_BODY_BYTES) {
+    return NextResponse.json(
+      { error: "La solicitud es demasiado grande." },
+      { status: 413, headers: rateHeaders },
+    );
+  }
+
   let body: unknown;
   try {
-    body = await req.json();
+    const rawBody = await req.text();
+    if (Buffer.byteLength(rawBody, "utf8") > MAX_BODY_BYTES) {
+      return NextResponse.json(
+        { error: "La solicitud es demasiado grande." },
+        { status: 413, headers: rateHeaders },
+      );
+    }
+    body = JSON.parse(rawBody);
   } catch {
-    return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
+    return NextResponse.json(
+      { error: "JSON inválido" },
+      { status: 400, headers: rateHeaders },
+    );
   }
 
   const messages = sanitizeMessages(
@@ -83,21 +121,25 @@ export async function POST(req: Request) {
   if (!messages) {
     return NextResponse.json(
       { error: "Formato de mensajes inválido" },
-      { status: 400 },
+      { status: 400, headers: rateHeaders },
     );
   }
 
   const lastUserMessage = messages[messages.length - 1].content;
 
   if (!process.env.OPENROUTER_API_KEY) {
-    return NextResponse.json(localRecommend(lastUserMessage));
+    return NextResponse.json(localRecommend(lastUserMessage), {
+      headers: rateHeaders,
+    });
   }
 
   try {
     const raw = await askOpenRouter(messages);
-    return NextResponse.json(parseModelResponse(raw));
+    return NextResponse.json(parseModelResponse(raw), { headers: rateHeaders });
   } catch (error) {
     console.error("[sommelier] fallo del modelo, usando fallback local:", error);
-    return NextResponse.json(localRecommend(lastUserMessage));
+    return NextResponse.json(localRecommend(lastUserMessage), {
+      headers: rateHeaders,
+    });
   }
 }

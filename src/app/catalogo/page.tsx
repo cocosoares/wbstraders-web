@@ -4,7 +4,7 @@ import { CatalogClient } from "./catalog-client";
 export const metadata: Metadata = {
   title: "Catálogo de vinos — Delivery en Lima",
   description:
-    "Compra vinos de autor argentinos online: Malbec, Torrontés, espumantes y blends premiados de Escala Humana, Finca Ambrosía y Viñas en Flor. Packs con hasta 50% de descuento y delivery en Lima.",
+    "Compra vinos de autor argentinos online: Malbec, Torrontés, espumantes y blends de Escala Humana, Finca Ambrosía y Viñas en Flor. Precios de caja y delivery en Lima.",
 };
 
 export default async function CatalogPage({

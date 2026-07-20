@@ -1,6 +1,9 @@
 node_modules/
 .next/
 .claude/
+.codex/
+.playwright-cli/
+output/playwright/
 out/
 build/
 .env

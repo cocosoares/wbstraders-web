@@ -7,13 +7,14 @@ import { Menu, MessageCircle, ShoppingBag, X } from "lucide-react";
 import { LogoIcon, LogoWordmark } from "@/components/logo";
 import { SITE } from "@/data/site";
 import { useCart } from "@/hooks/use-cart";
+import { trackEvent } from "@/lib/analytics";
 
 const NAV_LINKS = [
   { href: "/catalogo", label: "Catálogo" },
   { href: "/arma-tu-caja", label: "Arma tu caja" },
+  { href: "/ocasiones", label: "Ocasiones" },
   { href: "/bodegas", label: "Bodegas" },
   { href: "/#delivery", label: "Delivery" },
-  { href: "/#contacto", label: "Contacto" },
 ];
 
 export function Navbar() {
@@ -54,6 +55,7 @@ export function Navbar() {
         <div className="flex items-center gap-1.5">
           <a
             href={`https://wa.me/${SITE.whatsapp}`}
+            onClick={() => trackEvent("whatsapp_clicked", { location: "navbar" })}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Escríbenos por WhatsApp"

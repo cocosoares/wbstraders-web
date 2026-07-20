@@ -24,7 +24,7 @@ export async function generateMetadata({
   if (!product) return {};
   return {
     title: `${product.name} — Comprar online con delivery en Lima`,
-    description: `${product.name} (${product.brand}, ${product.region}). ${product.description} Desde ${formatPEN(bestUnitCents(product))} por botella. Delivery en Lima, paga con Yape o tarjeta.`,
+    description: `${product.name} (${product.brand}, ${product.region}). ${product.description} Desde ${formatPEN(bestUnitCents(product))} por botella. Delivery en Lima y pago seguro.`,
   };
 }
 
@@ -43,7 +43,6 @@ function productJsonLd(product: Product) {
       lowPrice: (bestUnitCents(product) / 100).toFixed(2),
       highPrice: (product.regularUnitCents / 100).toFixed(2),
       offerCount: product.tiers.length,
-      availability: "https://schema.org/InStock",
       seller: { "@type": "Organization", name: SITE.name },
     },
   };

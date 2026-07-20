@@ -35,7 +35,7 @@ export const PRODUCTS: Product[] = [
     tiers: [
       t(1, 86.64, "Precio oferta"),
       t(3, 231.9, "Pack x3"),
-      t(6, 372.9, "50% dscto. x6"),
+      t(6, 372.9, "Mejor precio x6"),
     ],
   },
   {
@@ -59,7 +59,7 @@ export const PRODUCTS: Product[] = [
     tiers: [
       t(1, 86.64, "Precio oferta"),
       t(3, 231.9, "Pack x3"),
-      t(6, 372.9, "50% dscto. x6"),
+      t(6, 372.9, "Mejor precio x6"),
     ],
   },
 
@@ -84,7 +84,7 @@ export const PRODUCTS: Product[] = [
     tiers: [
       t(1, 86.9, "Precio oferta"),
       t(3, 231.9, "Pack x3"),
-      t(6, 399.9, "50% dscto. x6"),
+      t(6, 399.9, "Mejor precio x6"),
     ],
   },
   {
@@ -107,7 +107,7 @@ export const PRODUCTS: Product[] = [
     tiers: [
       t(1, 86.9, "Precio oferta"),
       t(3, 231.9, "Pack x3"),
-      t(6, 399.9, "50% dscto. x6"),
+      t(6, 399.9, "Mejor precio x6"),
     ],
   },
   {
@@ -130,7 +130,7 @@ export const PRODUCTS: Product[] = [
     tiers: [
       t(1, 86.9, "Precio oferta"),
       t(3, 231.9, "Pack x3"),
-      t(6, 399.9, "50% dscto. x6"),
+      t(6, 399.9, "Mejor precio x6"),
     ],
   },
 
@@ -157,7 +157,7 @@ export const PRODUCTS: Product[] = [
     tiers: [
       t(1, 114.9),
       t(2, 147.9, "Precio oferta x2"),
-      t(4, 204.9, "50% dscto. x4"),
+      t(4, 204.9, "Mejor precio x4"),
     ],
   },
   {
@@ -182,7 +182,7 @@ export const PRODUCTS: Product[] = [
       t(2, 89.9, "Precio oferta x2"),
       t(4, 173.9, "Pack x4"),
       t(6, 231.9, "Pack x6"),
-      t(12, 399.9, "50% dscto. x12"),
+      t(12, 399.9, "Mejor precio x12"),
     ],
   },
   {
@@ -207,7 +207,7 @@ export const PRODUCTS: Product[] = [
       t(2, 89.9, "Precio oferta x2"),
       t(4, 173.9, "Pack x4"),
       t(6, 231.9, "Pack x6"),
-      t(12, 399.9, "50% dscto. x12"),
+      t(12, 399.9, "Mejor precio x12"),
     ],
   },
   {
@@ -232,7 +232,7 @@ export const PRODUCTS: Product[] = [
     tiers: [
       t(1, 134.9, "Precio oferta"),
       t(2, 240.9, "Pack x2"),
-      t(3, 312.9, "50% dscto. x3"),
+      t(3, 312.9, "Mejor precio x3"),
     ],
   },
   {
@@ -257,7 +257,7 @@ export const PRODUCTS: Product[] = [
     tiers: [
       t(1, 134.9, "Precio oferta"),
       t(2, 240.9, "Pack x2"),
-      t(3, 312.9, "50% dscto. x3"),
+      t(3, 312.9, "Mejor precio x3"),
     ],
   },
 
@@ -286,7 +286,7 @@ export const PRODUCTS: Product[] = [
       t(2, 131.9, "Precio oferta x2"),
       t(4, 254.9, "Pack x4"),
       t(6, 339.9, "Pack x6"),
-      t(12, 539.9, "50% dscto. x12"),
+      t(12, 539.9, "Mejor precio x12"),
     ],
   },
   {
@@ -312,7 +312,7 @@ export const PRODUCTS: Product[] = [
       t(2, 131.9, "Precio oferta x2"),
       t(4, 254.9, "Pack x4"),
       t(6, 339.9, "Pack x6"),
-      t(12, 588.0, "50% dscto. x12"),
+      t(12, 588.0, "Mejor precio x12"),
     ],
   },
   {
@@ -338,7 +338,7 @@ export const PRODUCTS: Product[] = [
       t(2, 131.9, "Precio oferta x2"),
       t(4, 254.9, "Pack x4"),
       t(6, 339.9, "Pack x6"),
-      t(12, 588.0, "50% dscto. x12"),
+      t(12, 588.0, "Mejor precio x12"),
     ],
   },
   {
@@ -365,7 +365,7 @@ export const PRODUCTS: Product[] = [
       t(2, 111.9, "Precio oferta x2"),
       t(4, 215.9, "Pack x4"),
       t(6, 288.9, "Pack x6"),
-      t(12, 456.9, "50% dscto. x12"),
+      t(12, 456.9, "Mejor precio x12"),
     ],
   },
 ];

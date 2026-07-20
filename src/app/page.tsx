@@ -4,14 +4,18 @@ import {
   Boxes,
   Clock,
   CreditCard,
+  Gift,
+  GlassWater,
   MapPin,
   Store,
   Truck,
+  Utensils,
 } from "lucide-react";
 import { FloatingBottle } from "@/components/floating-bottle";
 import { ProductCard } from "@/components/product-card";
 import { Reveal } from "@/components/reveal";
 import { AskSommelierButton } from "@/components/sommelier-widget";
+import { TrackedAnchor, TrackedLink } from "@/components/tracked-link";
 import { DELIVERY_ZONES } from "@/data/delivery-zones";
 import { BRANDS, PRODUCTS_BY_ID } from "@/data/products";
 import { WINERIES } from "@/data/wineries";
@@ -27,6 +31,44 @@ const FEATURED_IDS = [
   "ambrosia-brut-nature",
 ];
 
+const OCCASIONS = [
+  {
+    href: "/ocasiones/ceviche",
+    slug: "ceviche",
+    title: "Ceviche y cocina marina",
+    description: "Blancos frescos para limón, ají y productos del mar.",
+    icon: Utensils,
+  },
+  {
+    href: "/ocasiones/parrilla",
+    slug: "parrilla",
+    title: "Parrilla",
+    description: "Tintos argentinos para carnes y vegetales a la brasa.",
+    icon: Utensils,
+  },
+  {
+    href: "/ocasiones/nikkei",
+    slug: "nikkei",
+    title: "Mesa nikkei",
+    description: "Frescura para cítricos, salinidad, umami y picante.",
+    icon: GlassWater,
+  },
+  {
+    href: "/ocasiones/celebracion",
+    slug: "celebracion",
+    title: "Celebraciones",
+    description: "Burbujas y botellas especiales para compartir.",
+    icon: GlassWater,
+  },
+  {
+    href: "/regalos",
+    slug: "regalo",
+    title: "Regalos",
+    description: "Etiquetas elegidas con intención, personales o corporativas.",
+    icon: Gift,
+  },
+];
+
 const FAQS = [
   {
     q: "¿En cuánto tiempo llega mi pedido?",
@@ -34,7 +76,7 @@ const FAQS = [
   },
   {
     q: "¿Cómo puedo pagar?",
-    a: "Aceptamos Yape, Plin, transferencia BCP y tarjetas de crédito/débito. Al confirmar tu pedido por WhatsApp te enviamos los datos de pago y validamos tu comprobante al instante.",
+    a: "Los medios disponibles se muestran al finalizar la compra. Tu pedido se considera pagado solo cuando el pago queda confirmado en el sistema; una captura de pantalla no sustituye esa confirmación.",
   },
   {
     q: "¿Puedo combinar cepas y mantener el descuento por volumen?",
@@ -42,7 +84,7 @@ const FAQS = [
   },
   {
     q: "¿Venden a restaurantes y tiendas especializadas?",
-    a: "Somos importadores directos y atendemos al canal HORECA hace años. Si tienes un restaurante, bar o tienda, escríbenos por WhatsApp para precios mayoristas y carta de vinos a medida.",
+    a: "Sí. Restaurantes, hoteles, bares y tiendas pueden solicitar una evaluación en nuestra página HORECA. La disponibilidad, precios y demás condiciones se confirman en una propuesta comercial.",
   },
 ];
 
@@ -66,37 +108,41 @@ function Hero() {
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 md:grid-cols-2 md:py-24">
         <Reveal>
           <p className="text-xs font-semibold tracking-[0.25em] text-olive-200 uppercase">
-            Importadores directos · Vinos de autor argentinos
+            Vinos de autor argentinos · Delivery en Lima
           </p>
           <h1 className="mt-4 font-display text-4xl leading-tight font-semibold sm:text-5xl">
-            Los vinos de los mejores restaurantes,{" "}
-            <span className="text-gold-500">ahora en tu mesa</span>
+            Elige el vino por lo que vas a comer,{" "}
+            <span className="text-gold-500">celebrar o regalar</span>
           </h1>
           <p className="mt-5 max-w-md text-base leading-relaxed text-cream-200/90">
             Escala Humana, Finca Ambrosía y Viñas en Flor: etiquetas de
-            Gualtallary y Cafayate con delivery en Lima. Precio de importador,
-            packs con hasta 50% de descuento.
+            Gualtallary y Cafayate seleccionadas para la mesa peruana. Compra
+            por botella o combina estilos en una caja.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link
+            <TrackedLink
               href="/catalogo"
+              eventName="home_cta_clicked"
+              eventParams={{ action: "shop", placement: "hero" }}
               className="rounded-xl bg-wine-600 px-7 py-4 font-bold text-cream-50 transition-colors duration-200 hover:bg-wine-500"
             >
               Ver el catálogo
-            </Link>
-            <Link
+            </TrackedLink>
+            <TrackedLink
               href="/arma-tu-caja"
+              eventName="home_cta_clicked"
+              eventParams={{ action: "build_box", placement: "hero" }}
               className="rounded-xl border border-cream-50/30 px-7 py-4 font-semibold text-cream-50 transition-colors duration-200 hover:bg-cream-50/10"
             >
               Arma tu caja
-            </Link>
+            </TrackedLink>
           </div>
           <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-olive-200">
             <span className="flex items-center gap-1.5">
-              <Truck className="h-4 w-4" /> Delivery 24 h en Lima
+              <Truck className="h-4 w-4" /> Delivery desde 24 h en Lima
             </span>
             <span className="flex items-center gap-1.5">
-              <CreditCard className="h-4 w-4" /> Yape · Plin · Tarjetas
+              <CreditCard className="h-4 w-4" /> Pago seguro · confirmación verificable
             </span>
             <span className="flex items-center gap-1.5">
               <Award className="h-4 w-4" /> Etiquetas 93+ pts.
@@ -194,6 +240,55 @@ function Featured() {
   );
 }
 
+function ShopByOccasion() {
+  return (
+    <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <Reveal className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold tracking-[0.25em] text-wine-600 uppercase">
+            Empieza por la ocasión
+          </p>
+          <h2 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">
+            Menos duda, una elección con sentido
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-700">
+            Guías breves para elegir según el plato o el momento, con opciones
+            concretas del catálogo y sin reglas complicadas.
+          </p>
+        </div>
+        <TrackedLink
+          href="/ocasiones"
+          eventName="home_cta_clicked"
+          eventParams={{ action: "view_occasions", placement: "occasion_section" }}
+          className="text-sm font-semibold text-olive-600 transition-colors hover:text-olive-700"
+        >
+          Ver todas las ocasiones →
+        </TrackedLink>
+      </Reveal>
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {OCCASIONS.map(({ icon: Icon, ...occasion }, index) => (
+          <Reveal key={occasion.slug} delay={index * 0.06}>
+            <TrackedLink
+              href={occasion.href}
+              eventName="occasion_selected"
+              eventParams={{ occasion_slug: occasion.slug, placement: "home" }}
+              className="group block h-full rounded-2xl border border-cream-300 bg-cream-50 p-5 transition-shadow hover:shadow-lg hover:shadow-ink-900/5"
+            >
+              <Icon className="h-5 w-5 text-olive-600" aria-hidden="true" />
+              <h3 className="mt-4 font-display text-lg font-semibold group-hover:text-wine-600">
+                {occasion.title}
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-ink-500">
+                {occasion.description}
+              </p>
+            </TrackedLink>
+          </Reveal>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function MixMatchBanner() {
   return (
     <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
@@ -204,20 +299,22 @@ function MixMatchBanner() {
               <Boxes className="h-4 w-4" /> Mix & Match
             </p>
             <h2 className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
-              Arma tu caja y paga precio de bodega
+              Arma tu caja y desbloquea el precio del pack
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-wine-100">
               Combina cepas de una misma línea — por ejemplo 2 Bonarda, 2
               Malvasía y 2 Sangiovese Rosé — y desbloquea el precio del pack
-              completo. Hasta 50% de descuento por botella.
+              completo. Antes de agregar, verás la cantidad y el precio aplicable.
             </p>
           </div>
-          <Link
+          <TrackedLink
             href="/arma-tu-caja"
+            eventName="home_cta_clicked"
+            eventParams={{ action: "build_box", placement: "mix_match" }}
             className="shrink-0 rounded-xl bg-cream-50 px-7 py-4 font-bold text-wine-700 transition-colors duration-200 hover:bg-cream-200"
           >
             Empezar mi caja
-          </Link>
+          </TrackedLink>
         </div>
       </Reveal>
     </section>
@@ -264,14 +361,16 @@ function Delivery() {
         <Reveal delay={0.2}>
           <p className="mt-6 text-sm text-ink-500">
             ¿Tu distrito no aparece? Escríbenos por{" "}
-            <a
+            <TrackedAnchor
               href={`https://wa.me/${SITE.whatsapp}`}
               target="_blank"
               rel="noopener noreferrer"
+              eventName="whatsapp_clicked"
+              eventParams={{ location: "delivery_help" }}
               className="font-semibold text-olive-600 underline-offset-2 hover:underline"
             >
               WhatsApp
-            </a>{" "}
+            </TrackedAnchor>{" "}
             y coordinamos tu entrega.
           </p>
         </Reveal>
@@ -313,23 +412,22 @@ function B2B() {
             <Store className="h-4 w-4" /> Canal HORECA
           </p>
           <h2 className="mt-3 max-w-xl font-display text-3xl font-semibold">
-            La cava detrás de tus restaurantes favoritos
+            Vinos para restaurantes, hoteles y tiendas
           </h2>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-cream-200/80">
-            Hace años abastecemos a restaurantes y tiendas especializadas de
-            Lima. Si tienes un negocio gastronómico, te armamos una carta de
-            vinos a medida con precios mayoristas.
+            Si tienes un negocio gastronómico, revisamos tu carta, rotación y
+            presupuesto para preparar una propuesta sujeta a stock y condiciones comerciales.
           </p>
         </Reveal>
         <Reveal delay={0.1}>
-          <a
-            href={`https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent("Hola WBStraders, tengo un negocio y quiero información mayorista.")}`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <TrackedLink
+            href="/horeca"
+            eventName="home_cta_clicked"
+            eventParams={{ action: "view_horeca", placement: "horeca_banner" }}
             className="shrink-0 rounded-xl bg-gold-500 px-7 py-4 font-bold text-ink-900 transition-colors duration-200 hover:bg-gold-600"
           >
-            Contacto mayorista
-          </a>
+            Conocer canal HORECA
+          </TrackedLink>
         </Reveal>
       </div>
     </section>
@@ -372,6 +470,7 @@ export default function HomePage() {
       <Hero />
       <Brands />
       <Featured />
+      <ShopByOccasion />
       <MixMatchBanner />
       <Delivery />
       <SommelierTeaser />

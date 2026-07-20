@@ -1,0 +1,215 @@
+import "server-only";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { WhatsAppCartItem } from "./cart-link";
+
+export type WhatsAppInboundRecord = {
+  contactId: string;
+  conversationId: string;
+  ageVerifiedAt: string | null;
+  conversationState: "bot" | "human" | "closed";
+  messageId: string | null;
+  duplicate: boolean;
+};
+
+type RpcRow = {
+  contact_id: string;
+  conversation_id: string;
+  age_verified_at: string | null;
+  conversation_state: WhatsAppInboundRecord["conversationState"];
+  message_id: string | null;
+  duplicate: boolean;
+};
+
+export async function recordWhatsAppInbound(
+  db: SupabaseClient,
+  input: {
+    phoneNormalized: string;
+    providerMessageId: string;
+    kind: "text" | "interactive" | "media" | "status";
+    body?: string;
+    replyToProviderMessageId?: string;
+    eventId: string;
+    eventType: string;
+  },
+): Promise<WhatsAppInboundRecord> {
+  const { data, error } = await db.rpc("record_whatsapp_inbound", {
+    p_phone_normalized: input.phoneNormalized,
+    p_provider_message_id: input.providerMessageId,
+    p_message_kind: input.kind,
+    p_body: input.body?.slice(0, 4_000) ?? "",
+    p_reply_to_provider_message_id: input.replyToProviderMessageId ?? null,
+    p_metadata: { eventType: input.eventType },
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? (data[0] as RpcRow | undefined) : undefined;
+  if (!row) throw new Error("whatsapp_inbound_not_recorded");
+
+  if (!row.duplicate) {
+    const event = await db.from("whatsapp_events").insert({
+      provider: "ycloud",
+      provider_event_id: input.eventId,
+      contact_id: row.contact_id,
+      conversation_id: row.conversation_id,
+      message_id: row.message_id,
+      event_type: input.eventType,
+      payload: { messageKind: input.kind },
+    });
+    if (event.error && event.error.code !== "23505") throw event.error;
+  }
+
+  return {
+    contactId: row.contact_id,
+    conversationId: row.conversation_id,
+    ageVerifiedAt: row.age_verified_at,
+    conversationState: row.conversation_state,
+    messageId: row.message_id,
+    duplicate: row.duplicate,
+  };
+}
+
+export async function recordWhatsAppConsent(
+  db: SupabaseClient,
+  input: {
+    contactId: string;
+    purpose: "marketing" | "age_verification";
+    status: "granted" | "denied" | "withdrawn";
+    evidence: Record<string, string | boolean | number | null>;
+  },
+): Promise<void> {
+  const { error } = await db.rpc("record_whatsapp_consent", {
+    p_contact_id: input.contactId,
+    p_purpose: input.purpose,
+    p_status: input.status,
+    p_policy_version: "2026-07",
+    p_source: "whatsapp_conversation",
+    p_evidence: input.evidence,
+  });
+  if (error) throw error;
+}
+
+export async function queueWhatsAppReply(
+  db: SupabaseClient,
+  input: {
+    contactId: string;
+    conversationId: string;
+    body: string;
+    metadata?: Record<string, string | boolean | number | null>;
+  },
+): Promise<{ outboxId: string; messageId: string }> {
+  const { data, error } = await db.rpc("enqueue_whatsapp_outbound", {
+    p_conversation_id: input.conversationId,
+    p_contact_id: input.contactId,
+    p_body: input.body.slice(0, 4_000),
+    p_message_kind: "text",
+    p_metadata: input.metadata ?? {},
+  });
+  if (error) throw error;
+  const row = Array.isArray(data)
+    ? (data[0] as { outbox_id?: string; message_id?: string } | undefined)
+    : undefined;
+  if (!row?.outbox_id || !row.message_id) throw new Error("whatsapp_outbound_not_queued");
+  return { outboxId: row.outbox_id, messageId: row.message_id };
+}
+
+export async function requestWhatsAppHandoff(
+  db: SupabaseClient,
+  input: {
+    conversationId: string;
+    reason: string;
+    requestedBy: "customer" | "bot" | "system";
+    summary?: string;
+  },
+): Promise<void> {
+  const { error } = await db.rpc("request_whatsapp_handoff", {
+    p_conversation_id: input.conversationId,
+    p_reason: input.reason.slice(0, 160),
+    p_requested_by: input.requestedBy,
+    p_summary: input.summary?.slice(0, 2_000) ?? null,
+    p_metadata: {},
+  });
+  if (error) throw error;
+}
+
+export async function createWhatsAppCheckoutSession(
+  db: SupabaseClient,
+  input: {
+    contactId: string;
+    conversationId: string;
+    items: readonly WhatsAppCartItem[];
+  },
+): Promise<string> {
+  const cart = input.items.map((item) => ({
+    productId: item.productId,
+    quantity: item.quantity,
+  }));
+  const { data, error } = await db.rpc("create_whatsapp_checkout_session", {
+    p_contact_id: input.contactId,
+    p_conversation_id: input.conversationId,
+    p_cart_snapshot: cart,
+    p_attribution: { source: "whatsapp", medium: "conversation", campaign: "sommelier" },
+    p_ttl_minutes: 60,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data)
+    ? (data[0] as { token?: string } | undefined)
+    : undefined;
+  if (!row?.token || !/^[a-f0-9]{64}$/.test(row.token)) {
+    throw new Error("whatsapp_checkout_session_not_created");
+  }
+  return row.token;
+}
+
+export async function consumeWhatsAppCheckoutSession(
+  db: SupabaseClient,
+  token: string,
+): Promise<{ items: Record<string, number>; attribution: Record<string, string> } | null> {
+  const { data, error } = await db.rpc("consume_whatsapp_checkout_session", {
+    p_token: token,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data)
+    ? (data[0] as { cart_snapshot?: unknown; attribution?: unknown } | undefined)
+    : undefined;
+  if (!row || !Array.isArray(row.cart_snapshot)) return null;
+
+  const items: Record<string, number> = {};
+  for (const item of row.cart_snapshot) {
+    if (
+      typeof item === "object" &&
+      item !== null &&
+      typeof (item as { productId?: unknown }).productId === "string" &&
+      Number.isInteger((item as { quantity?: unknown }).quantity)
+    ) {
+      items[(item as { productId: string }).productId] = (item as { quantity: number }).quantity;
+    }
+  }
+  const attribution =
+    typeof row.attribution === "object" && row.attribution !== null
+      ? Object.fromEntries(
+          Object.entries(row.attribution as Record<string, unknown>).flatMap(([key, value]) =>
+            typeof value === "string" ? [[key, value.slice(0, 100)]] : [],
+          ),
+        )
+      : {};
+  return { items, attribution };
+}
+
+/**
+ * Links an already-created order to an opaque WhatsApp checkout session. This
+ * is deliberately server-only: a browser query parameter must never be able
+ * to label an arbitrary order as WhatsApp revenue.
+ */
+export async function markWhatsAppCheckoutConverted(
+  db: SupabaseClient,
+  token: string,
+  orderId: string,
+): Promise<boolean> {
+  const { data, error } = await db.rpc("mark_whatsapp_checkout_converted", {
+    p_token: token,
+    p_order_id: orderId,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? (data[0] as { converted?: unknown } | undefined) : data;
+  return row?.converted === true;
+}

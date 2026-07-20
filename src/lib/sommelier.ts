@@ -16,7 +16,7 @@ export function buildCatalogContext(): string {
           `x${t.minQty} ${formatPEN(t.packTotalCents)} (${formatPEN(tierUnitCents(t))} c/u)`,
       )
       .join(", ");
-    return `- slug: ${p.slug} | ${p.name} | ${p.brand} | ${p.type} (${p.grapes.join(", ")}) | ${p.region} | Marida: ${p.pairings.join(", ")} | Nota: ${p.tastingNotes} | Precios: ${tiers} | Regular: ${formatPEN(p.regularUnitCents)}`;
+    return `- slug: ${p.slug} | ${p.name} | ${p.brand} | ${p.type} (${p.grapes.join(", ")}) | ${p.region} | Marida: ${p.pairings.join(", ")} | Nota: ${p.tastingNotes} | Packs publicados: ${tiers}`;
   }).join("\n");
 }
 
@@ -28,7 +28,7 @@ Reglas de recomendación:
 3. Asocia platos peruanos de inmediato: ceviche/tiradito → Torrontés o Sauvignon Blanc; parrilla/lomo → RN40 o Malbec; pastas/pizza → Bonarda; celebración → Brut Nature; regalo especial → Geografía Extraordinaria.
 
 Técnicas de venta a aplicar SIEMPRE que sea natural (nunca fuerces las tres a la vez; elige la más relevante al momento de la conversación):
-4. UPSELL por volumen: cuando recomiendes un vino, menciona el precio del pack más grande y cuánto ahorra vs. comprar suelto (ej. "en pack x6 baja a S/ X la botella, ahorras S/ Y"). Ancla siempre el precio regular contra el precio oferta.
+4. UPSELL por volumen: cuando recomiendes un vino, menciona un pack publicado y su precio exacto. Si calculas ahorro, compáralo únicamente contra el precio x1 publicado del mismo producto; no inventes PVP, precio regular, porcentaje, vigencia ni disponibilidad.
 5. CROSS-SELL inteligente: sugiere un complemento con lógica real, no al azar — un espumante para abrir la noche, una segunda etiqueta para acompañar otro plato del mismo almuerzo, o copas/quesos si el contexto lo pide.
 6. MIX & MATCH: si el vino recomendado pertenece a una línea con "y/o" (cepas que comparten precio), dile explícitamente que puede combinar 2-3 etiquetas de esa línea y llegar igual al precio de pack — esto baja la barrera de "comprar 6 iguales".
 7. CIERRE ACCIONABLE: termina casi siempre invitando a agregar al carrito o preguntando cuántas botellas necesita — no dejes la conversación abierta sin un siguiente paso claro.
@@ -61,7 +61,7 @@ const RULES: { pattern: RegExp; reply: string; suggestions: string[] }[] = [
   {
     pattern: /asado|parrilla|carne|lomo|anticuch|cordero|bife|costilla|churrasco/,
     reply:
-      "Para carnes a la parrilla te recomiendo estructura y taninos firmes: el RN40 Malbec es nuestro ícono para el asado del domingo, y el Livverá Malbec aporta fruta fresca de Gualtallary. Llevando 6 botellas (puedes combinar cepas de la misma línea) desbloqueas el precio mayorista.",
+      "Para carnes a la parrilla te recomiendo estructura y taninos firmes: el RN40 Malbec es nuestro ícono para el asado del domingo, y el Livverá Malbec aporta fruta fresca de Gualtallary. Con 6 botellas de la misma línea puedes acceder al precio de pack publicado y combinar sus cepas.",
     suggestions: ["rn40-malbec", "livvera-malbec", "1700-msnm-malbec"],
   },
   {
@@ -79,13 +79,13 @@ const RULES: { pattern: RegExp; reply: string; suggestions: string[] }[] = [
   {
     pattern: /celebra|brindis|cumplean|aniversario|espumante|champan|champagne|boda/,
     reply:
-      "Para brindar, nuestro Finca Ambrosía Brut Nature: método tradicional, burbuja fina y cero azúcar añadida. En pack x4 queda a mitad de precio por botella — ideal para que la celebración no se quede corta.",
+      "Para brindar, nuestro Finca Ambrosía Brut Nature: método tradicional, burbuja fina y cero azúcar añadida. El pack x4 ofrece el mejor precio publicado por botella — ideal para que la celebración no se quede corta.",
     suggestions: ["finca-ambrosia-brut-nature"],
   },
   {
     pattern: /regal|sorprend|detalle|impresionar/,
     reply:
-      "Para un regalo memorable, la línea Geografía Extraordinaria (93–95 pts. de la crítica) es nuestra joya: hay blend de tintas y de blancas del Valle de Uco. Y si buscas algo festivo, el Brut Nature siempre queda impecable.",
+      "Para un regalo memorable, la línea Geografía Extraordinaria es nuestra selección especial: hay blend de tintas y de blancas del Valle de Uco. Y si buscas algo festivo, el Brut Nature siempre queda impecable.",
     suggestions: [
       "geografia-extraordinaria-tintas-de-uco",
       "geografia-extraordinaria-blancas-de-uco",
@@ -95,19 +95,19 @@ const RULES: { pattern: RegExp; reply: string; suggestions: string[] }[] = [
   {
     pattern: /picante|aji de gallina|aji|chifa|arroz chaufa|rocoto/,
     reply:
-      "Con platos con ají o chifa, un blanco aromático equilibra el picante: el 1700 msnm Torrontés es la elección de los sommeliers, y la Livverá Malvasía es una rareza deliciosa que sorprende.",
+      "Con platos con ají o chifa, un blanco aromático equilibra el picante: el 1700 msnm Torrontés aporta frescura, y la Livverá Malvasía es una alternativa poco habitual que sorprende.",
     suggestions: ["1700-msnm-torrontes", "livvera-malvasia"],
   },
   {
     pattern: /rosado|rose|terraza|verano|tarde|piqueo/,
     reply:
-      "Para una tarde de terraza o piqueos, el Livverá Sangiovese Rosé: seco, fresco y elegante. Combínalo con Bonarda y Malvasía de la misma línea y el pack x6 queda a precio de bodega.",
+      "Para una tarde de terraza o piqueos, el Livverá Sangiovese Rosé: seco, fresco y elegante. Combínalo con Bonarda y Malvasía de la misma línea para completar el pack x6 publicado.",
     suggestions: ["livvera-sangiovese-rose", "livvera-malvasia"],
   },
   {
     pattern: /barat|economic|precio|oferta|presupuesto/,
     reply:
-      "La mejor relación calidad-precio de la cava es la línea Casa de Finca Ambrosía: Sauvignon Blanc y Malbec desde S/ 33.33 por botella en pack x12 (y puedes combinar ambos). Calidad de restaurante a precio de importador.",
+      "Si buscas cuidar el presupuesto, revisa la línea Casa de Finca Ambrosía: Sauvignon Blanc y Malbec desde S/ 33.33 por botella en el pack x12 publicado, con opción de combinar ambos.",
     suggestions: ["casa-sauvignon-blanc", "casa-malbec"],
   },
 ];
@@ -148,8 +148,8 @@ export function parseModelResponse(raw: string): SommelierResponse {
           .filter((s) => validSlugs.has(s))
           .slice(0, 3)
       : [];
-    return { reply, suggestions };
+    return { reply: reply.slice(0, 2_000), suggestions };
   } catch {
-    return { reply: raw.trim(), suggestions: [] };
+    return { reply: raw.trim().slice(0, 2_000), suggestions: [] };
   }
 }

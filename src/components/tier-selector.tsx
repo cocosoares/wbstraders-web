@@ -22,6 +22,10 @@ export function TierSelector({
   const add = useCart((s) => s.add);
   const [selected, setSelected] = useState(0);
   const bestIndex = product.tiers.length - 1;
+  const visibleIndexes =
+    product.tiers.length <= 3
+      ? product.tiers.map((_, index) => index)
+      : [0, product.tiers.length - 2, product.tiers.length - 1];
 
   return (
     <div>
@@ -30,9 +34,10 @@ export function TierSelector({
           Elige tu pack
         </legend>
         <div className="space-y-2.5">
-          {product.tiers.map((tier, index) => {
+          {visibleIndexes.map((index) => {
+            const tier = product.tiers[index];
             const unit = tierUnitCents(tier);
-            const regular = product.regularUnitCents * tier.minQty;
+            const regular = tierUnitCents(product.tiers[0]) * tier.minQty;
             const savings = regular - tier.packTotalCents;
             const isSelected = selected === index;
             return (
@@ -62,10 +67,17 @@ export function TierSelector({
                         Mejor precio
                       </span>
                     )}
+                    {index === bestIndex - 1 && product.tiers.length > 3 && (
+                      <span className="ml-2 rounded-full bg-olive-100 px-2 py-0.5 text-[10px] font-bold text-olive-800">
+                        Caja recomendada
+                      </span>
+                    )}
                   </p>
                   <p className="mt-0.5 text-xs text-ink-500">
                     {formatPEN(unit)} c/u
-                    {tier.label ? ` · ${tier.label}` : ""}
+                    {tier.label && !tier.label.includes("%")
+                      ? ` · ${tier.label}`
+                      : ""}
                   </p>
                 </div>
                 <div className="text-right">
@@ -87,7 +99,7 @@ export function TierSelector({
       <button
         type="button"
         onClick={() => add(product.id, product.tiers[selected].minQty)}
-        className="mt-5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-wine-600 px-6 py-4 text-base font-bold text-cream-50 transition-colors duration-200 hover:bg-wine-700"
+        className="mt-5 flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-wine-600 px-6 py-4 text-base font-bold text-cream-50 transition-colors duration-200 hover:bg-wine-700"
       >
         <ShoppingBag className="h-5 w-5" />
         Agregar al carrito · {formatPEN(product.tiers[selected].packTotalCents)}

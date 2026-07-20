@@ -259,7 +259,7 @@ export function CartDrawer() {
                 <div className="border-t border-cream-300 bg-cream-50 px-5 py-4">
                   {pricing.savingsCents > 0 && (
                     <div className="mb-2 flex items-center justify-between text-sm">
-                      <span className="text-ink-500">Precio regular</span>
+                      <span className="text-ink-500">Comprando por unidad</span>
                       <span className="text-ink-300 line-through">
                         {formatPEN(pricing.regularCents)}
                       </span>
@@ -285,7 +285,7 @@ export function CartDrawer() {
                     <ArrowRight className="h-5 w-5" />
                   </Link>
                   <p className="mt-2 text-center text-xs text-ink-500">
-                    Yape · Plin · Transferencia BCP · Tarjetas
+                    Pago online seguro o coordinación asistida
                   </p>
                 </div>
               </>
