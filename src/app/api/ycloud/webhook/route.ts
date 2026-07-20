@@ -75,6 +75,7 @@ export async function POST(request: Request) {
       message.messageId
     ) {
       const inbound = await recordWhatsAppInbound(db, {
+        provider: "ycloud",
         phoneNormalized: normalizedPhone,
         providerMessageId: message.messageId,
         kind:

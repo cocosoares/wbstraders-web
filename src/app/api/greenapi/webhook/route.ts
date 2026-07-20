@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     const message = extractGreenApiMessage(event);
     if (event.typeWebhook === "incomingMessageReceived" && message.phone && message.messageId) {
       const inbound = await recordWhatsAppInbound(db, {
+        provider: "greenapi",
         phoneNormalized: message.phone,
         providerMessageId: message.messageId,
         kind: message.kind,

@@ -24,6 +24,7 @@ type RpcRow = {
 export async function recordWhatsAppInbound(
   db: SupabaseClient,
   input: {
+    provider: "ycloud" | "greenapi";
     phoneNormalized: string;
     providerMessageId: string;
     kind: "text" | "interactive" | "media" | "status";
@@ -47,7 +48,7 @@ export async function recordWhatsAppInbound(
 
   if (!row.duplicate) {
     const event = await db.from("whatsapp_events").insert({
-      provider: "ycloud",
+      provider: input.provider,
       provider_event_id: input.eventId,
       contact_id: row.contact_id,
       conversation_id: row.conversation_id,
