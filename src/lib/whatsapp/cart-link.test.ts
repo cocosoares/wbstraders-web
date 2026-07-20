@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  createWhatsAppCheckoutSessionUrl,
   createWhatsAppCheckoutUrl,
   decodeWhatsAppCart,
   encodeWhatsAppCart,
@@ -31,5 +32,12 @@ describe("WhatsApp checkout links", () => {
     ).toBe(
       "https://wbstraders.pe/checkout?wbs_cart=1700-torrontes%3A1&utm_source=whatsapp&utm_medium=conversation&utm_campaign=sommelier&utm_content=recommendation",
     );
+  });
+
+  it("creates a compact opaque URL for WhatsApp checkout buttons", () => {
+    const token = "a".repeat(64);
+    expect(
+      createWhatsAppCheckoutSessionUrl({ baseUrl: "https://wbstraders.pe", token }),
+    ).toBe(`https://wbstraders.pe/w/${token}`);
   });
 });

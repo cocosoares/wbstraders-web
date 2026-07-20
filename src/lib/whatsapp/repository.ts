@@ -109,14 +109,15 @@ export async function queueWhatsAppReply(
     contactId: string;
     conversationId: string;
     body: string;
-    metadata?: Record<string, string | boolean | number | null>;
+    kind?: "text" | "interactive" | "media";
+    metadata?: Record<string, unknown>;
   },
 ): Promise<{ outboxId: string; messageId: string }> {
   const { data, error } = await db.rpc("enqueue_whatsapp_outbound", {
     p_conversation_id: input.conversationId,
     p_contact_id: input.contactId,
     p_body: input.body.slice(0, 4_000),
-    p_message_kind: "text",
+    p_message_kind: input.kind ?? "text",
     p_metadata: input.metadata ?? {},
   });
   if (error) throw error;
@@ -125,6 +126,67 @@ export async function queueWhatsAppReply(
     : undefined;
   if (!row?.outbox_id || !row.message_id) throw new Error("whatsapp_outbound_not_queued");
   return { outboxId: row.outbox_id, messageId: row.message_id };
+}
+
+export async function getRecentWhatsAppInboundMessages(
+  db: SupabaseClient,
+  conversationId: string,
+  limit = 8,
+): Promise<string[]> {
+  const { data, error } = await db
+    .from("whatsapp_messages")
+    .select("body")
+    .eq("conversation_id", conversationId)
+    .eq("direction", "inbound")
+    .order("occurred_at", { ascending: false })
+    .limit(Math.min(12, Math.max(1, limit)));
+  if (error) throw error;
+  return (data ?? [])
+    .flatMap((row) => (typeof row.body === "string" && row.body.trim() ? [row.body.trim()] : []))
+    .reverse();
+}
+
+export async function updateWhatsAppConversationQualification(
+  db: SupabaseClient,
+  conversationId: string,
+  qualification: {
+    occasion?: string;
+    wineStyle?: string;
+    purchaseFormat?: string;
+    budget?: string;
+  },
+): Promise<void> {
+  const safeQualification = Object.fromEntries(
+    Object.entries(qualification).flatMap(([key, value]) =>
+      typeof value === "string" && value.trim() ? [[key.slice(0, 80), value.trim().slice(0, 160)]] : [],
+    ),
+  );
+  if (!Object.keys(safeQualification).length) return;
+
+  const current = await db
+    .from("whatsapp_conversations")
+    .select("metadata")
+    .eq("id", conversationId)
+    .single();
+  if (current.error) throw current.error;
+  const metadata =
+    typeof current.data.metadata === "object" && current.data.metadata !== null
+      ? (current.data.metadata as Record<string, unknown>)
+      : {};
+  const previousQualification =
+    typeof metadata.qualification === "object" && metadata.qualification !== null
+      ? (metadata.qualification as Record<string, unknown>)
+      : {};
+  const updated = await db
+    .from("whatsapp_conversations")
+    .update({
+      metadata: {
+        ...metadata,
+        qualification: { ...previousQualification, ...safeQualification },
+      },
+    })
+    .eq("id", conversationId);
+  if (updated.error) throw updated.error;
 }
 
 export async function requestWhatsAppHandoff(

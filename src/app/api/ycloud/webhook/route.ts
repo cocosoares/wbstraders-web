@@ -8,12 +8,15 @@ import {
 } from "@/lib/ycloud/webhook";
 import { respondToWhatsApp } from "@/lib/whatsapp/conversation";
 import { createWhatsAppCheckoutSessionUrl } from "@/lib/whatsapp/cart-link";
+import { buildWhatsAppBotDelivery } from "@/lib/whatsapp/bot-delivery";
 import {
   createWhatsAppCheckoutSession,
+  getRecentWhatsAppInboundMessages,
   queueWhatsAppReply,
   recordWhatsAppConsent,
   recordWhatsAppInbound,
   requestWhatsAppHandoff,
+  updateWhatsAppConversationQualification,
 } from "@/lib/whatsapp/repository";
 
 export const runtime = "nodejs";
@@ -91,19 +94,22 @@ export async function POST(request: Request) {
       });
 
       if (!inbound.duplicate) {
+        const recentInboundMessages = await getRecentWhatsAppInboundMessages(
+          db,
+          inbound.conversationId,
+        );
         const reply = respondToWhatsApp({
           message: message.text ?? "",
-          ageVerified: Boolean(inbound.ageVerifiedAt),
+          recentInboundMessages,
         });
-
-        if (reply.intent === "age_confirmed") {
-          await recordWhatsAppConsent(db, {
-            contactId: inbound.contactId,
-            purpose: "age_verification",
-            status: "granted",
-            evidence: { eventId: event.id, channel: "whatsapp" },
-          });
+        if (reply.leadData) {
+          await updateWhatsAppConversationQualification(
+            db,
+            inbound.conversationId,
+            reply.leadData,
+          );
         }
+
         if (reply.withdrawMarketingConsent) {
           await recordWhatsAppConsent(db, {
             contactId: inbound.contactId,
@@ -122,31 +128,36 @@ export async function POST(request: Request) {
         }
 
         const botEnabled = process.env.WHATSAPP_BOT_ENABLED?.trim().toLowerCase() === "true";
-        let outgoingText = reply.text;
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://wbstraders.pe";
+        let checkoutUrl: string | null = null;
         if (botEnabled && reply.checkoutItems && reply.checkoutItems.length > 0) {
           const token = await createWhatsAppCheckoutSession(db, {
             contactId: inbound.contactId,
             conversationId: inbound.conversationId,
             items: reply.checkoutItems,
           });
-          const checkoutUrl = createWhatsAppCheckoutSessionUrl({
-            baseUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://wbstraders.pe",
+          checkoutUrl = createWhatsAppCheckoutSessionUrl({
+            baseUrl,
             token,
           });
-          if (checkoutUrl) {
-            outgoingText += `\n\nCompra segura: ${checkoutUrl}`;
-          }
         }
 
         // Once a person has taken ownership, the bot stays silent. The first
         // handoff acknowledgement is still allowed so the customer knows a
         // human will continue the conversation.
         if (botEnabled && (inbound.conversationState === "bot" || reply.requiresHuman)) {
+          const delivery = buildWhatsAppBotDelivery({
+            reply,
+            baseUrl,
+            checkoutUrl,
+            provider: "ycloud",
+          });
           await queueWhatsAppReply(db, {
             contactId: inbound.contactId,
             conversationId: inbound.conversationId,
-            body: outgoingText,
-            metadata: { intent: reply.intent },
+            body: delivery.body,
+            kind: delivery.kind,
+            metadata: delivery.metadata,
           });
         }
       }

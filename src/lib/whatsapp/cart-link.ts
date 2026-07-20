@@ -84,12 +84,7 @@ export function createWhatsAppCheckoutSessionUrl(args: {
 }): string | null {
   if (!/^[a-f0-9]{64}$/.test(args.token)) return null;
   try {
-    const url = new URL("/checkout", args.baseUrl);
-    url.searchParams.set("wbs_checkout", args.token);
-    url.searchParams.set("utm_source", "whatsapp");
-    url.searchParams.set("utm_medium", "conversation");
-    url.searchParams.set("utm_campaign", "sommelier");
-    url.searchParams.set("utm_content", "recommendation");
+    const url = new URL(`/w/${args.token}`, args.baseUrl);
     return url.toString();
   } catch {
     return null;

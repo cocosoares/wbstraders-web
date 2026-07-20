@@ -44,8 +44,15 @@ export function extractGreenApiMessage(event: GreenApiEvent): {
   const extendedTextMessageData = message.extendedTextMessageData as Record<string, unknown> | undefined;
   const buttonsResponseMessage = message.buttonsResponseMessage as Record<string, unknown> | undefined;
   const listResponseMessage = message.listResponseMessage as Record<string, unknown> | undefined;
+  const templateButtonReplyMessage = message.templateButtonReplyMessage as
+    | Record<string, unknown>
+    | undefined;
   const quoted = message.quotedMessage as Record<string, unknown> | undefined;
   const interactiveText =
+    (typeof templateButtonReplyMessage?.selectedDisplayText === "string" &&
+      templateButtonReplyMessage.selectedDisplayText) ||
+    (typeof templateButtonReplyMessage?.selectedId === "string" &&
+      templateButtonReplyMessage.selectedId) ||
     (typeof buttonsResponseMessage?.selectedButtonId === "string" && buttonsResponseMessage.selectedButtonId) ||
     (typeof buttonsResponseMessage?.selectedDisplayText === "string" && buttonsResponseMessage.selectedDisplayText) ||
     (typeof listResponseMessage?.title === "string" && listResponseMessage.title) ||

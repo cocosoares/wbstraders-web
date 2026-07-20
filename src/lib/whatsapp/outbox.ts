@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendWhatsAppText, type WhatsAppDeliveryResult } from "@/lib/whatsapp/provider";
+import { sendWhatsAppMessage, type WhatsAppDeliveryResult } from "@/lib/whatsapp/provider";
+import {
+  parseWhatsAppRichMessage,
+  type WhatsAppRichMessage,
+} from "@/lib/whatsapp/rich-message";
 
 export type WhatsAppOutboxJob = {
   outboxId: string;
@@ -8,6 +12,7 @@ export type WhatsAppOutboxJob = {
   phone: string;
   body: string;
   attempt: number;
+  rich?: WhatsAppRichMessage;
 };
 
 export type WhatsAppOutboxResult = {
@@ -28,13 +33,30 @@ export async function claimWhatsAppOutbox(
     p_lease_seconds: 120,
   });
   if (error) throw error;
-  return (Array.isArray(data) ? data : []).map((row) => ({
+  const claimed = (Array.isArray(data) ? data : []).map((row) => ({
     outboxId: row.outbox_id as string,
     messageId: row.message_id as string,
     phone: row.phone_normalized as string,
     body: row.body as string,
     attempt: row.attempt as number,
   }));
+  if (!claimed.length) return [];
+
+  const messages = await db
+    .from("whatsapp_messages")
+    .select("id, metadata")
+    .in("id", claimed.map((job) => job.messageId));
+  if (messages.error) throw messages.error;
+  const richByMessageId = new Map(
+    (messages.data ?? []).map((message) => {
+      const metadata =
+        typeof message.metadata === "object" && message.metadata !== null
+          ? (message.metadata as Record<string, unknown>)
+          : {};
+      return [message.id, parseWhatsAppRichMessage(metadata.rich)] as const;
+    }),
+  );
+  return claimed.map((job) => ({ ...job, rich: richByMessageId.get(job.messageId) }));
 }
 
 export async function completeWhatsAppOutbox(
@@ -68,7 +90,12 @@ export async function dispatchWhatsAppOutbox(args: {
     providerReference?: string;
     errorCode?: string;
   }) => Promise<void>;
-  send?: (args: { to: string; text: string; externalId: string }) => Promise<WhatsAppDeliveryResult>;
+  send?: (args: {
+    to: string;
+    text: string;
+    externalId: string;
+    rich?: WhatsAppRichMessage;
+  }) => Promise<WhatsAppDeliveryResult>;
 }): Promise<WhatsAppOutboxResult> {
   const workerId = args.workerId ?? randomUUID();
   const jobs = await args.claim(workerId, args.limit);
@@ -78,7 +105,7 @@ export async function dispatchWhatsAppOutbox(args: {
     failed: 0,
     finalizationErrors: 0,
   };
-  const send = args.send ?? sendWhatsAppText;
+  const send = args.send ?? sendWhatsAppMessage;
 
   for (const job of jobs) {
     let delivery: WhatsAppDeliveryResult;
@@ -87,6 +114,7 @@ export async function dispatchWhatsAppOutbox(args: {
         to: job.phone,
         text: job.body,
         externalId: `wbs-whatsapp-${job.outboxId}`,
+        ...(job.rich ? { rich: job.rich } : {}),
       });
     } catch {
       delivery = { sent: false, reason: "provider_error" };

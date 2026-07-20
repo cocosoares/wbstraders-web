@@ -26,4 +26,23 @@ describe("GREEN API webhook", () => {
     expect(verifyGreenApiWebhookSecret("incorrecto", "correcto")).toBe(false);
     expect(verifyGreenApiWebhookSecret(null, "correcto")).toBe(false);
   });
+
+  it("extracts the label selected from an interactive reply button", () => {
+    const event = greenApiEventSchema.parse({
+      typeWebhook: "incomingMessageReceived",
+      idMessage: "green-button-1",
+      senderData: { sender: "51900000003@c.us" },
+      messageData: {
+        typeMessage: "templateButtonsReplyMessage",
+        templateButtonReplyMessage: {
+          selectedId: "style_red",
+          selectedDisplayText: "Tintos 🍷",
+        },
+      },
+    });
+    expect(extractGreenApiMessage(event)).toMatchObject({
+      text: "Tintos 🍷",
+      kind: "interactive",
+    });
+  });
 });

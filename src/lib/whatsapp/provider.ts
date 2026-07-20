@@ -1,5 +1,6 @@
-import { sendGreenApiText } from "@/lib/greenapi/client";
+import { sendGreenApiMessage } from "@/lib/greenapi/client";
 import { sendYCloudText } from "@/lib/ycloud/client";
+import { whatsappTextFallback, type WhatsAppRichMessage } from "@/lib/whatsapp/rich-message";
 
 export type WhatsAppDeliveryResult = {
   sent: boolean;
@@ -13,12 +14,21 @@ export function activeWhatsAppProvider(): "greenapi" | "ycloud" {
     : "ycloud";
 }
 
+export async function sendWhatsAppMessage(args: {
+  to: string;
+  text: string;
+  externalId?: string;
+  rich?: WhatsAppRichMessage;
+}): Promise<WhatsAppDeliveryResult> {
+  return activeWhatsAppProvider() === "greenapi"
+    ? sendGreenApiMessage(args)
+    : sendYCloudText({ ...args, text: whatsappTextFallback(args.text, args.rich) });
+}
+
 export async function sendWhatsAppText(args: {
   to: string;
   text: string;
   externalId?: string;
 }): Promise<WhatsAppDeliveryResult> {
-  return activeWhatsAppProvider() === "greenapi"
-    ? sendGreenApiText(args)
-    : sendYCloudText(args);
+  return sendWhatsAppMessage(args);
 }

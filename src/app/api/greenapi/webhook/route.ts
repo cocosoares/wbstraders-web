@@ -9,12 +9,15 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { extractGreenApiMessage, greenApiEventSchema, verifyGreenApiWebhookSecret } from "@/lib/greenapi/webhook";
 import { respondToWhatsApp } from "@/lib/whatsapp/conversation";
 import { createWhatsAppCheckoutSessionUrl } from "@/lib/whatsapp/cart-link";
+import { buildWhatsAppBotDelivery } from "@/lib/whatsapp/bot-delivery";
 import {
   createWhatsAppCheckoutSession,
+  getRecentWhatsAppInboundMessages,
   queueWhatsAppReply,
   recordWhatsAppConsent,
   recordWhatsAppInbound,
   requestWhatsAppHandoff,
+  updateWhatsAppConversationQualification,
 } from "@/lib/whatsapp/repository";
 
 export const runtime = "nodejs";
@@ -78,9 +81,20 @@ export async function POST(request: Request) {
         eventType: event.typeWebhook,
       });
       if (!inbound.duplicate) {
-        const reply = respondToWhatsApp({ message: message.text ?? "", ageVerified: Boolean(inbound.ageVerifiedAt) });
-        if (reply.intent === "age_confirmed") {
-          await recordWhatsAppConsent(db, { contactId: inbound.contactId, purpose: "age_verification", status: "granted", evidence: { eventId, channel: "whatsapp" } });
+        const recentInboundMessages = await getRecentWhatsAppInboundMessages(
+          db,
+          inbound.conversationId,
+        );
+        const reply = respondToWhatsApp({
+          message: message.text ?? "",
+          recentInboundMessages,
+        });
+        if (reply.leadData) {
+          await updateWhatsAppConversationQualification(
+            db,
+            inbound.conversationId,
+            reply.leadData,
+          );
         }
         if (reply.withdrawMarketingConsent) {
           await recordWhatsAppConsent(db, { contactId: inbound.contactId, purpose: "marketing", status: "withdrawn", evidence: { eventId, channel: "whatsapp" } });
@@ -89,14 +103,26 @@ export async function POST(request: Request) {
           await requestWhatsAppHandoff(db, { conversationId: inbound.conversationId, reason: reply.intent, requestedBy: reply.intent === "human_handoff" ? "customer" : "bot", summary: message.text?.slice(0, 500) });
         }
         const botEnabled = process.env.WHATSAPP_BOT_ENABLED?.trim().toLowerCase() === "true";
-        let outgoingText = reply.text;
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://wbstraders.pe";
+        let checkoutUrl: string | null = null;
         if (botEnabled && reply.checkoutItems?.length) {
           const token = await createWhatsAppCheckoutSession(db, { contactId: inbound.contactId, conversationId: inbound.conversationId, items: reply.checkoutItems });
-          const checkoutUrl = createWhatsAppCheckoutSessionUrl({ baseUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://wbstraders.pe", token });
-          if (checkoutUrl) outgoingText += `\n\nCompra segura: ${checkoutUrl}`;
+          checkoutUrl = createWhatsAppCheckoutSessionUrl({ baseUrl, token });
         }
         if (botEnabled && (inbound.conversationState === "bot" || reply.requiresHuman)) {
-          await queueWhatsAppReply(db, { contactId: inbound.contactId, conversationId: inbound.conversationId, body: outgoingText, metadata: { intent: reply.intent, provider: "greenapi" } });
+          const delivery = buildWhatsAppBotDelivery({
+            reply,
+            baseUrl,
+            checkoutUrl,
+            provider: "greenapi",
+          });
+          await queueWhatsAppReply(db, {
+            contactId: inbound.contactId,
+            conversationId: inbound.conversationId,
+            body: delivery.body,
+            kind: delivery.kind,
+            metadata: delivery.metadata,
+          });
         }
       }
     }
