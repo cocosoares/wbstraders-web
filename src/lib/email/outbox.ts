@@ -31,14 +31,19 @@ export async function processEmailJob(
     return syncResendMarketingContact(contact);
   }
 
-  const recipient = job.kind.endsWith(".operations")
+  const intendedRecipient = job.kind.endsWith(".operations")
     ? process.env.EMAIL_OPERATIONS_TO?.trim()
     : job.recipientEmail;
-  if (!recipient) return { sent: false, errorCode: "email_recipient_missing" };
+  if (!intendedRecipient) return { sent: false, errorCode: "email_recipient_missing" };
+  const testRecipient = process.env.EMAIL_TEST_RECIPIENT?.trim();
+  const recipient = testRecipient || intendedRecipient;
 
-  const content = job.kind.startsWith("claim.")
+  const rendered = job.kind.startsWith("claim.")
     ? renderClaimEmail(job.kind, await getClaimEmailContext(db, payloadId(job, "claimId")))
     : renderOrderEmail(job.kind, await getOrderEmailContext(db, payloadId(job, "orderId")));
+  const content = testRecipient
+    ? { ...rendered, subject: `[PRUEBA] ${rendered.subject}` }
+    : rendered;
 
   return sendResendEmail({
     to: recipient,

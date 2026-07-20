@@ -37,12 +37,18 @@ RESEND_WEBHOOK_SECRET=
 RESEND_FROM="WBStraders <pedidos@mail.tudominio.com>"
 RESEND_REPLY_TO=greciasemorile@gmail.com
 EMAIL_OPERATIONS_TO=greciasemorile@gmail.com
+EMAIL_TEST_RECIPIENT=
 EMAIL_TRANSACTIONAL_ENABLED=false
 EMAIL_MARKETING_SYNC_ENABLED=false
 ```
 
 Nunca se debe usar `NEXT_PUBLIC_` para claves o secretos de Resend. Los dos
 interruptores permanecen en `false` hasta terminar las pruebas.
+
+Mientras no exista un dominio verificado, usar
+`EMAIL_TEST_RECIPIENT=greciasemorile@gmail.com`. Esto redirige todos los correos
+transaccionales a esa única bandeja y agrega `[PRUEBA]` al asunto. Debe eliminarse
+antes de enviar a clientes reales.
 
 ## Configuración en Resend
 
