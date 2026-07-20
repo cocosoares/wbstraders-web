@@ -127,6 +127,52 @@ export type DashboardData = {
   recentOrders: AdminOrder[];
 };
 
+export type AdminEmailOutboxItem = {
+  id: string;
+  kind: string;
+  recipientEmail: string | null;
+  state: string;
+  attempts: number;
+  maxAttempts: number;
+  deliveryStatus: string | null;
+  lastError: string | null;
+  sentAt: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+};
+
+export type AdminEmailEvent = {
+  id: string;
+  eventType: string;
+  providerEmailId: string | null;
+  recipientEmail: string | null;
+  receivedAt: string;
+};
+
+export type AdminEmailSuppression = {
+  email: string;
+  reason: string;
+  active: boolean;
+  updatedAt: string;
+};
+
+export type AdminEmailDashboard = {
+  sentToday: number;
+  deliveredToday: number;
+  attentionRequired: number;
+  activeSuppressions: number;
+  outbox: AdminEmailOutboxItem[];
+  events: AdminEmailEvent[];
+  suppressions: AdminEmailSuppression[];
+  settings: {
+    transactionalEnabled: boolean;
+    marketingEnabled: boolean;
+    testMode: boolean;
+    testRecipient: string | null;
+    fromAddress: string | null;
+  };
+};
+
 type OrderRow = {
   id: string;
   order_number: string;
@@ -230,6 +276,35 @@ type WhatsAppHandoffRow = {
   status: string;
   reason: string;
   requested_at: string;
+};
+
+type EmailOutboxRow = {
+  id: string;
+  kind: string;
+  recipient_email: string | null;
+  state: string;
+  attempts: number;
+  max_attempts: number;
+  delivery_status: string | null;
+  last_error: string | null;
+  sent_at: string | null;
+  delivered_at: string | null;
+  created_at: string;
+};
+
+type EmailEventRow = {
+  id: string;
+  event_type: string;
+  provider_email_id: string | null;
+  recipient_email: string | null;
+  received_at: string;
+};
+
+type EmailSuppressionRow = {
+  email: string;
+  reason: string;
+  active: boolean;
+  updated_at: string;
 };
 
 const DEMO_MESSAGE =
@@ -685,6 +760,138 @@ export async function loadWhatsAppMetrics(): Promise<DataResult<AdminWhatsAppMet
       state: "error",
       message:
         "No pudimos calcular las métricas de WhatsApp. Confirma que la migración esté aplicada.",
+    };
+  }
+}
+
+export async function loadEmailDashboard(filters?: {
+  state?: string;
+  query?: string;
+}): Promise<DataResult<AdminEmailDashboard>> {
+  const access = await requireAdminAccess();
+  if (access.mode === "demo") return { state: "demo", message: DEMO_MESSAGE };
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const todayStart = limaTodayStart();
+    const [sent, delivered, attention, suppressionCount, outbox, events, suppressions] =
+      await Promise.all([
+        supabase
+          .from("email_events")
+          .select("id", { count: "exact", head: true })
+          .eq("event_type", "email.sent")
+          .gte("received_at", todayStart),
+        supabase
+          .from("email_events")
+          .select("id", { count: "exact", head: true })
+          .eq("event_type", "email.delivered")
+          .gte("received_at", todayStart),
+        supabase
+          .from("email_outbox")
+          .select("id", { count: "exact", head: true })
+          .in("state", ["failed", "dead"]),
+        supabase
+          .from("email_suppressions")
+          .select("email", { count: "exact", head: true })
+          .eq("active", true),
+        supabase
+          .from("email_outbox")
+          .select(
+            "id,kind,recipient_email,state,attempts,max_attempts,delivery_status,last_error,sent_at,delivered_at,created_at",
+          )
+          .order("created_at", { ascending: false })
+          .limit(100),
+        supabase
+          .from("email_events")
+          .select("id,event_type,provider_email_id,recipient_email,received_at")
+          .order("received_at", { ascending: false })
+          .limit(50),
+        supabase
+          .from("email_suppressions")
+          .select("email,reason,active,updated_at")
+          .eq("active", true)
+          .order("updated_at", { ascending: false })
+          .limit(50),
+      ]);
+
+    const firstError = [sent, delivered, attention, suppressionCount, outbox, events, suppressions]
+      .find((result) => result.error)?.error;
+    if (firstError) throw firstError;
+
+    const requestedState = String(filters?.state || "all").toLowerCase();
+    const allowedStates = new Set([
+      "all",
+      "pending",
+      "processing",
+      "sent",
+      "failed",
+      "dead",
+      "suppressed",
+    ]);
+    const stateFilter = allowedStates.has(requestedState) ? requestedState : "all";
+    const query = String(filters?.query || "").trim().toLowerCase().slice(0, 120);
+    const mappedOutbox = ((outbox.data || []) as EmailOutboxRow[]).map((row) => ({
+      id: row.id,
+      kind: row.kind,
+      recipientEmail: row.recipient_email,
+      state: row.state,
+      attempts: row.attempts,
+      maxAttempts: row.max_attempts,
+      deliveryStatus: row.delivery_status,
+      lastError: row.last_error,
+      sentAt: row.sent_at,
+      deliveredAt: row.delivered_at,
+      createdAt: row.created_at,
+    }));
+
+    return {
+      state: "ready",
+      data: {
+        sentToday: sent.count || 0,
+        deliveredToday: delivered.count || 0,
+        attentionRequired: attention.count || 0,
+        activeSuppressions: suppressionCount.count || 0,
+        outbox: mappedOutbox.filter((item) => {
+          const matchesState = stateFilter === "all" || item.state === stateFilter;
+          const matchesQuery =
+            !query ||
+            item.kind.toLowerCase().includes(query) ||
+            item.recipientEmail?.toLowerCase().includes(query) ||
+            item.lastError?.toLowerCase().includes(query);
+          return matchesState && Boolean(matchesQuery);
+        }),
+        events: ((events.data || []) as EmailEventRow[]).map((event) => ({
+          id: event.id,
+          eventType: event.event_type,
+          providerEmailId: event.provider_email_id,
+          recipientEmail: event.recipient_email,
+          receivedAt: event.received_at,
+        })),
+        suppressions: ((suppressions.data || []) as EmailSuppressionRow[]).map(
+          (suppression) => ({
+            email: suppression.email,
+            reason: suppression.reason,
+            active: suppression.active,
+            updatedAt: suppression.updated_at,
+          }),
+        ),
+        settings: {
+          transactionalEnabled:
+            process.env.EMAIL_TRANSACTIONAL_ENABLED?.trim().toLowerCase() === "true" &&
+            Boolean(process.env.RESEND_API_KEY?.trim()),
+          marketingEnabled:
+            process.env.EMAIL_MARKETING_SYNC_ENABLED?.trim().toLowerCase() === "true",
+          testMode: Boolean(process.env.EMAIL_TEST_RECIPIENT?.trim()),
+          testRecipient: process.env.EMAIL_TEST_RECIPIENT?.trim() || null,
+          fromAddress: process.env.RESEND_FROM?.trim() || null,
+        },
+      },
+    };
+  } catch {
+    return {
+      state: "error",
+      message:
+        "No pudimos cargar la operación de email. Confirma que las migraciones de Resend estén aplicadas.",
     };
   }
 }

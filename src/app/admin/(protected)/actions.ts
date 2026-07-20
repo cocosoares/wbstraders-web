@@ -76,6 +76,10 @@ const whatsappConversationActionSchema = z.object({
   resolutionNote: z.string().trim().max(2_000).optional(),
 });
 
+const emailRetrySchema = z.object({
+  outboxId: z.string().uuid(),
+});
+
 export async function updateOrderFulfillment(
   _previous: AdminActionState,
   formData: FormData,
@@ -373,6 +377,33 @@ export async function manageWhatsAppConversation(
       ? "Tomaste la conversación. El bot ya no responderá este caso."
       : "Conversación cerrada.",
   );
+}
+
+export async function retryEmailDelivery(
+  _previous: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const parsed = emailRetrySchema.safeParse({ outboxId: formData.get("outboxId") });
+  if (!parsed.success) return failure("No pudimos identificar el correo para reintentar.");
+
+  const access = await requireAdminAccess();
+  if (access.mode !== "live" || !access.userId) {
+    return failure("Conecta Supabase antes de reintentar correos.");
+  }
+
+  const { error } = await getSupabaseAdmin().rpc("admin_retry_email_outbox", {
+    p_outbox_id: parsed.data.outboxId,
+    p_actor_id: access.userId,
+  });
+  if (error) {
+    if (error.message.includes("email_outbox_not_retryable")) {
+      return failure("Este correo ya no está en un estado que permita reintento.");
+    }
+    return failure("No pudimos devolver el correo a la cola. Inténtalo nuevamente.");
+  }
+
+  revalidatePath("/admin/emails");
+  return success("Correo devuelto a la cola. Se procesará en menos de un minuto.");
 }
 
 function adminRpcMessage(message: string, fallback: string) {

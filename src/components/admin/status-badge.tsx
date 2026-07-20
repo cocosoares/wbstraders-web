@@ -27,6 +27,14 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   pending: { label: "Pendiente", className: "border-gold-500/40 bg-gold-500/10 text-ink-900" },
   issued: { label: "Emitido registrado", className: "border-olive-400 bg-olive-100 text-olive-900" },
   rejected: { label: "Rechazado", className: "border-wine-400 bg-wine-50 text-wine-800" },
+  processing: { label: "Procesando", className: "border-olive-400 bg-olive-50 text-olive-900" },
+  sent: { label: "Enviado", className: "border-olive-400 bg-olive-100 text-olive-900" },
+  failed: { label: "Fallido", className: "border-wine-400 bg-wine-50 text-wine-800" },
+  dead: { label: "Agotado", className: "border-wine-600 bg-wine-100 text-wine-900" },
+  suppressed: { label: "Bloqueado", className: "border-wine-400 bg-wine-50 text-wine-800" },
+  opened: { label: "Abierto", className: "border-olive-400 bg-olive-50 text-olive-900" },
+  bounced: { label: "Rebotado", className: "border-wine-400 bg-wine-50 text-wine-800" },
+  complained: { label: "Marcado como spam", className: "border-wine-600 bg-wine-100 text-wine-900" },
 };
 
 export function StatusBadge({ status }: { status: string }) {
