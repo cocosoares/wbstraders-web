@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   BadgeCheck,
   Ban,
@@ -297,12 +296,12 @@ function EmailDashboard({
           >
             Aplicar
           </button>
-          <Link
+          <a
             href="/admin/emails#cola"
             className="inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-bold text-wine-700 transition-colors hover:bg-wine-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wine-600 focus-visible:ring-offset-2"
           >
             Limpiar
-          </Link>
+          </a>
         </form>
 
         {data.outbox.length > 0 ? (
