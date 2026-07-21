@@ -10,7 +10,13 @@ export type GreenApiTextResult = {
   messageId?: string;
 };
 
-function greenApiConfig() {
+export type GreenApiConfig = {
+  instanceId: string;
+  apiToken: string;
+  apiUrl: string;
+};
+
+export function getGreenApiConfig(): GreenApiConfig | null {
   const instanceId = process.env.GREEN_API_INSTANCE_ID?.trim();
   const apiToken = process.env.GREEN_API_TOKEN?.trim();
   const apiUrl = process.env.GREEN_API_URL?.trim() || "https://api.greenapi.com";
@@ -30,7 +36,7 @@ export function greenApiChatId(phone: string): string | null {
 }
 
 async function sendGreenApiRequest(
-  config: NonNullable<ReturnType<typeof greenApiConfig>>,
+  config: GreenApiConfig,
   method: string,
   payload: Record<string, unknown>,
 ): Promise<GreenApiTextResult> {
@@ -65,7 +71,7 @@ export async function sendGreenApiMessage(args: {
   if (process.env.WHATSAPP_OUTBOUND_ENABLED?.trim().toLowerCase() !== "true") {
     return { sent: false, reason: "disabled" };
   }
-  const config = greenApiConfig();
+  const config = getGreenApiConfig();
   const chatId = greenApiChatId(args.to);
   const message = args.text.trim().slice(0, 20_000);
   if (!config || !chatId || !message) return { sent: false, reason: "not_configured" };
