@@ -1,5 +1,5 @@
 import type { WhatsAppBotReply } from "@/lib/whatsapp/conversation";
-import type { WhatsAppRichMessage } from "@/lib/whatsapp/rich-message";
+import type { WhatsAppActionButton, WhatsAppRichMessage } from "@/lib/whatsapp/rich-message";
 
 function absoluteHttpsUrl(baseUrl: string, path: string): string | undefined {
   try {
@@ -26,6 +26,23 @@ export function buildWhatsAppBotDelivery(args: {
   const checkoutUrl = args.checkoutUrl
     ? absoluteHttpsUrl(args.baseUrl, args.checkoutUrl)
     : undefined;
+  const actionButtons: WhatsAppActionButton[] = [
+    ...(checkoutUrl
+      ? [
+          {
+            type: "url" as const,
+            id: "secure_checkout",
+            text: "Comprar selección 🛒",
+            url: checkoutUrl,
+          },
+        ]
+      : []),
+    ...(args.reply.actionButtons ?? []).flatMap((button): WhatsAppActionButton[] => {
+      if (button.type !== "url") return [button];
+      const url = absoluteHttpsUrl(args.baseUrl, button.url);
+      return url ? [{ ...button, url }] : [];
+    }),
+  ].slice(0, 3);
 
   const rich: WhatsAppRichMessage = {
     header:
@@ -34,18 +51,7 @@ export function buildWhatsAppBotDelivery(args: {
         : "WBStraders",
     ...(args.reply.footer ? { footer: args.reply.footer } : {}),
     ...(args.reply.replyButtons?.length ? { replyButtons: args.reply.replyButtons } : {}),
-    ...(checkoutUrl
-      ? {
-          actionButtons: [
-            {
-              type: "url" as const,
-              id: "secure_checkout",
-              text: "Comprar selección 🛒",
-              url: checkoutUrl,
-            },
-          ],
-        }
-      : {}),
+    ...(actionButtons.length ? { actionButtons } : {}),
     ...(imageUrl && args.reply.productImage
       ? {
           image: {

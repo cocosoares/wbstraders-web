@@ -2,13 +2,17 @@ import { describe, expect, it } from "vitest";
 import { respondToWhatsApp } from "./conversation";
 
 describe("WhatsApp sommelier conversation", () => {
-  it("greets the customer with a useful three-option menu and no age gate", () => {
+  it("greets the customer with a useful menu and direct catalog download", () => {
     const reply = respondToWhatsApp({ message: "Hola" });
     expect(reply.intent).toBe("greeting");
     expect(reply.text).toContain("sommelier virtual");
     expect(reply.text).not.toContain("18 años");
-    expect(reply.replyButtons).toHaveLength(3);
+    expect(reply.replyButtons).toHaveLength(2);
     expect(reply.replyButtons?.map((button) => button.text)).toContain("Elegir un vino 🍷");
+    expect(reply.actionButtons?.[0]).toMatchObject({
+      id: "catalog_pdf",
+      url: "/catalogos/fiestas-patrias-2026.pdf",
+    });
   });
 
   it("asks one qualification question before recommending", () => {
@@ -43,6 +47,39 @@ describe("WhatsApp sommelier conversation", () => {
     expect(reply.intent).toBe("qualification");
     expect(reply.leadData?.occasion).toBe("ceviche y pescados");
     expect(reply.replyButtons?.map((button) => button.id)).toContain("format_single");
+  });
+
+  it("offers the catalog PDF and conversational collections", () => {
+    const catalog = respondToWhatsApp({ message: "Ver catálogo" });
+
+    expect(catalog.intent).toBe("catalog");
+    expect(catalog.actionButtons?.[0]).toMatchObject({
+      id: "catalog_pdf",
+      url: "/catalogos/fiestas-patrias-2026.pdf",
+    });
+    expect(catalog.replyButtons?.map((button) => button.id)).toContain("catalog_reds");
+
+    const reds = respondToWhatsApp({ message: "catalog_reds" });
+    expect(reds.suggestionSlugs).toContain("rn40-malbec");
+    expect(reds.actionButtons).toHaveLength(3);
+  });
+
+  it("adds web buttons for the recommended wine and its alternative", () => {
+    const reply = respondToWhatsApp({
+      message: "1 botella",
+      recentInboundMessages: ["Parrilla / carnes", "1 botella"],
+    });
+
+    expect(reply.intent).toBe("recommendation");
+    expect(reply.actionButtons?.map((button) => button.id)).toContain("product_rn40-malbec");
+    expect(reply.actionButtons?.map((button) => button.id)).toContain("product_livvera-malbec");
+  });
+
+  it("captures an email only with explicit marketing consent", () => {
+    const reply = respondToWhatsApp({ message: "ACEPTO Ana ana@example.com" });
+
+    expect(reply.intent).toBe("lead_capture");
+    expect(reply.marketingLead).toEqual({ name: "Ana", email: "ana@example.com" });
   });
 
   it("uses conversation context to recommend a real catalog product with photo and checkout items", () => {

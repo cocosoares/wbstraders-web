@@ -4,7 +4,7 @@ import { discreteTotalCents, tierUnitCents } from "@/lib/pricing";
 import { localRecommend } from "@/lib/sommelier";
 import { formatPEN } from "@/lib/utils";
 import type { WhatsAppCartItem } from "./cart-link";
-import type { WhatsAppReplyButton } from "./rich-message";
+import type { WhatsAppActionButton, WhatsAppReplyButton } from "./rich-message";
 
 export type WhatsAppIntent =
   | "greeting"
@@ -13,6 +13,8 @@ export type WhatsAppIntent =
   | "recommendation"
   | "shipping"
   | "order_support"
+  | "catalog"
+  | "lead_capture"
   | "human_handoff"
   | "opt_out";
 
@@ -29,17 +31,18 @@ export type WhatsAppBotReply = {
   suggestionSlugs: string[];
   checkoutItems?: WhatsAppCartItem[];
   replyButtons?: WhatsAppReplyButton[];
+  actionButtons?: WhatsAppActionButton[];
   productImage?: { path: string; fileName: string; caption: string };
   footer?: string;
   leadData?: WhatsAppLeadData;
+  marketingLead?: { email: string; name?: string };
   requiresHuman?: boolean;
   withdrawMarketingConsent?: boolean;
 };
 
 const MAIN_MENU: WhatsAppReplyButton[] = [
   { id: "choose_wine", text: "Elegir un vino 🍷" },
-  { id: "see_packs", text: "Ver packs 🎁" },
-  { id: "track_order", text: "Mi pedido 📦" },
+  { id: "see_catalog", text: "Ver catálogo 📚" },
 ];
 
 const OCCASION_MENU: WhatsAppReplyButton[] = [
@@ -66,13 +69,21 @@ const BUDGET_MENU: WhatsAppReplyButton[] = [
   { id: "budget_premium", text: "Más de S/250" },
 ];
 
+const CATALOG_MENU: WhatsAppReplyButton[] = [
+  { id: "catalog_reds", text: "Tintos 🍷" },
+  { id: "catalog_fresh", text: "Blancos y brindis 🥂" },
+];
+
 // GREEN API normally returns the visible button label, but some WhatsApp
 // clients return only `selectedId`. Translate the stable IDs so the sales
 // conversation always advances instead of asking the previous question again.
 const BUTTON_SELECTION_TEXT: Record<string, string> = {
   "choose wine": "quiero elegir un vino",
   "see packs": "quiero ver packs",
+  "see catalog": "ver catalogo",
   "track order": "mi pedido",
+  "catalog reds": "catalogo tintos",
+  "catalog fresh": "catalogo blancos y brindis",
   "occasion seafood": "ceviche y pescados",
   "occasion grill": "parrilla y carnes",
   "occasion gift": "regalo y celebracion",
@@ -97,6 +108,110 @@ function normalize(value: string) {
     .replace(/[^a-z0-9+\s/.-]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function extractEmail(value: string): string | undefined {
+  const match = value.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,63}\b/i);
+  return match?.[0]?.toLowerCase();
+}
+
+function extractLeadName(value: string, email: string): string | undefined {
+  const name = value
+    .replace(email, "")
+    .replace(/\b(acepto|aceptar|ofertas|oferta|recibir|quiero|deseo|suscribirme|suscripcion)\b/gi, " ")
+    .replace(/[^a-zA-ZÀ-ÿñÑ'\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return name.length >= 2 && name.length <= 80 ? name : undefined;
+}
+
+function catalogProductButton(
+  product: NonNullable<ReturnType<typeof PRODUCTS_BY_SLUG.get>>,
+): WhatsAppActionButton {
+  return {
+    type: "url",
+    id: `product_${product.slug}`,
+    text: `Ver ${product.name}`.slice(0, 25),
+    url: `/producto/${product.slug}`,
+  };
+}
+
+function catalogCollectionReply(
+  title: string,
+  productSlugs: readonly string[],
+): WhatsAppBotReply {
+  const products = productSlugs
+    .map((slug) => PRODUCTS_BY_SLUG.get(slug))
+    .flatMap((product) => (product ? [product] : []))
+    .slice(0, 3);
+  const featured = products[0];
+  if (!featured) {
+    return {
+      intent: "catalog",
+      text: "El catálogo se está actualizando. Puedes revisar todas las etiquetas disponibles en nuestra web.",
+      suggestionSlugs: [],
+      actionButtons: [{ type: "url", id: "catalog_web", text: "Ver catálogo web", url: "/catalogo" }],
+    };
+  }
+
+  return {
+    intent: "catalog",
+    text: [
+      `📚 *${title}*`,
+      ...products.map(
+        (product, index) =>
+          `${index + 1}. *${product.name}* — ${product.tastingNotes.split(".")[0]}. Desde ${formatPEN(tierUnitCents(product.tiers[0]))}.`,
+      ),
+      "\nToca cada botón para ver fotos, ficha y comprar desde la web.",
+    ].join("\n"),
+    suggestionSlugs: products.map((product) => product.slug),
+    actionButtons: products.map(catalogProductButton),
+    ...(featured.image
+      ? {
+          productImage: {
+            path: featured.image,
+            fileName: featured.image.split("/").at(-1) ?? `${featured.slug}.webp`,
+            caption: `🍷 ${featured.name} · ${featured.region}`,
+          },
+        }
+      : {}),
+    footer: "Catálogo WBStraders · Delivery en Lima",
+  };
+}
+
+function catalogReply(normalizedMessage: string): WhatsAppBotReply | undefined {
+  if (/catalogo tintos|tintos catalogo/.test(normalizedMessage)) {
+    return catalogCollectionReply("Tintos para descubrir", [
+      "rn40-malbec",
+      "livvera-malbec",
+      "casa-malbec",
+    ]);
+  }
+  if (/catalogo blancos|catalogo.*brindis|blancos y brindis/.test(normalizedMessage)) {
+    return catalogCollectionReply("Blancos y vinos para brindar", [
+      "1700-msnm-torrontes",
+      "casa-sauvignon-blanc",
+      "finca-ambrosia-brut-nature",
+    ]);
+  }
+  if (/\bcatalogo\b|\bproductos\b/.test(normalizedMessage)) {
+    return {
+      intent: "catalog",
+      text: "📚 *Catálogo WBStraders*\nExplora una selección por estilo o descarga el catálogo completo en PDF.",
+      suggestionSlugs: [],
+      replyButtons: CATALOG_MENU,
+      actionButtons: [
+        {
+          type: "url",
+          id: "catalog_pdf",
+          text: "Descargar PDF 📥",
+          url: "/catalogos/fiestas-patrias-2026.pdf",
+        },
+      ],
+      footer: "Puedes volver a escribir MENÚ cuando quieras.",
+    };
+  }
+  return undefined;
 }
 
 function buildContext(message: string, recentInboundMessages: readonly string[]): string {
@@ -207,6 +322,24 @@ function recommendationReply(context: string, lead: WhatsAppLeadData): WhatsAppB
   const alternativeText = alternative
     ? `\n\n✨ *Alternativa:* ${alternative.name}, ${alternative.tastingNotes.split(".")[0].toLowerCase()}. Desde ${formatPEN(tierUnitCents(alternative.tiers[0]))}.`
     : "";
+  const actionButtons: WhatsAppActionButton[] = [
+    {
+      type: "url",
+      id: `product_${primary.slug}`,
+      text: "Ver este vino",
+      url: `/producto/${primary.slug}`,
+    },
+    ...(alternative
+      ? [
+          {
+            type: "url" as const,
+            id: `product_${alternative.slug}`,
+            text: "Ver alternativa",
+            url: `/producto/${alternative.slug}`,
+          },
+        ]
+      : []),
+  ];
 
   return {
     intent: "recommendation",
@@ -219,6 +352,7 @@ function recommendationReply(context: string, lead: WhatsAppLeadData): WhatsAppB
     ].join("\n") + alternativeText + "\n\n🛒 Dejé esta selección lista para que la revises y completes tus datos de entrega.",
     suggestionSlugs,
     checkoutItems: [{ productId: primary.id, quantity }],
+    actionButtons,
     ...(primary.image
       ? {
           productImage: {
@@ -228,7 +362,7 @@ function recommendationReply(context: string, lead: WhatsAppLeadData): WhatsAppB
           },
         }
       : {}),
-    footer: "Precio publicado · Delivery en Lima",
+    footer: "Precio publicado · Delivery en Lima · Responde OFERTAS para recibir beneficios.",
     leadData: lead,
   };
 }
@@ -241,7 +375,10 @@ export function respondToWhatsApp(args: {
 }): WhatsAppBotReply {
   const incomingMessage = args.message.trim().slice(0, 1_500);
   const normalizedIncomingMessage = normalize(incomingMessage);
-  const message = BUTTON_SELECTION_TEXT[normalizedIncomingMessage] ?? incomingMessage;
+  const message =
+    BUTTON_SELECTION_TEXT[normalizedIncomingMessage] ??
+    BUTTON_SELECTION_TEXT[normalizedIncomingMessage.replace(/_/g, " ")] ??
+    incomingMessage;
   const normalizedMessage = normalize(message);
   const context = buildContext(message, args.recentInboundMessages ?? []);
   const normalizedContext = normalize(context);
@@ -252,6 +389,34 @@ export function respondToWhatsApp(args: {
       text: "Listo ✅ No volveremos a enviarte promociones por WhatsApp. Puedes escribirnos cuando necesites ayuda con un pedido o una recomendación.",
       suggestionSlugs: [],
       withdrawMarketingConsent: true,
+    };
+  }
+
+  const submittedEmail = extractEmail(incomingMessage);
+  const explicitlyAcceptsOffers = /\b(acepto|aceptar|si acepto|deseo recibir)\b/.test(normalizedMessage);
+  const asksForOffers =
+    normalizedMessage === "ofertas" ||
+    /\b(quiero|deseo|enviame|mandame|recibir|suscribirme)\b.*\b(ofertas|novedades|promociones)\b/.test(
+      normalizedMessage,
+    );
+
+  if (explicitlyAcceptsOffers && submittedEmail) {
+    const name = extractLeadName(incomingMessage, submittedEmail);
+    return {
+      intent: "lead_capture",
+      text: `¡Listo${name ? `, ${name}` : ""}! ✅ Guardé tu correo para enviarte novedades, maridajes y ofertas de WBStraders. Puedes pedir la baja cuando quieras escribiendo PARAR.`,
+      suggestionSlugs: [],
+      marketingLead: { email: submittedEmail, ...(name ? { name } : {}) },
+      footer: "Suscripción opcional · Puedes darte de baja en cualquier momento.",
+    };
+  }
+
+  if (asksForOffers || submittedEmail) {
+    return {
+      intent: "lead_capture",
+      text: "Con gusto. Es opcional y no afecta tu compra. Para autorizar el envío de ofertas, maridajes y novedades por correo, responde en un solo mensaje: *ACEPTO Tu nombre correo@ejemplo.com*.",
+      suggestionSlugs: [],
+      footer: "Solo usaremos tu correo para comunicaciones de WBStraders. Puedes darte de baja cuando quieras.",
     };
   }
 
@@ -305,12 +470,23 @@ export function respondToWhatsApp(args: {
   if (exactGreeting) {
     return {
       intent: "greeting",
-      text: "¡Hola! 👋 Soy el sommelier virtual de *WBStraders*. Te ayudo a elegir vinos argentinos para tu comida, regalo o celebración, y también a revisar pedidos.\n\n¿Qué te gustaría hacer?",
+      text: "¡Hola! 👋 Soy el sommelier virtual de *WBStraders*. Te ayudo a elegir vinos argentinos para tu comida, regalo o celebración.\n\n¿Qué te gustaría hacer? Para revisar un pedido, escribe *MI PEDIDO*.",
       suggestionSlugs: [],
       replyButtons: MAIN_MENU,
+      actionButtons: [
+        {
+          type: "url",
+          id: "catalog_pdf",
+          text: "Descargar PDF 📥",
+          url: "/catalogos/fiestas-patrias-2026.pdf",
+        },
+      ],
       footer: "Atención personalizada por WhatsApp",
     };
   }
+
+  const catalog = catalogReply(normalizedMessage);
+  if (catalog) return catalog;
 
   const lead: WhatsAppLeadData = {
     occasion: detectOccasion(normalizedMessage) ?? detectOccasion(normalizedContext),

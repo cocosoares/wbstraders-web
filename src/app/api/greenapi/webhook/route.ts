@@ -18,6 +18,7 @@ import {
   recordWhatsAppConsent,
   recordWhatsAppInbound,
   requestWhatsAppHandoff,
+  updateWhatsAppContactProfile,
   updateWhatsAppConversationQualification,
 } from "@/lib/whatsapp/repository";
 
@@ -99,6 +100,19 @@ export async function POST(request: Request) {
         }
         if (reply.withdrawMarketingConsent) {
           await recordWhatsAppConsent(db, { contactId: inbound.contactId, purpose: "marketing", status: "withdrawn", evidence: { eventId, channel: "whatsapp" } });
+        }
+        if (reply.marketingLead) {
+          await updateWhatsAppContactProfile(db, {
+            contactId: inbound.contactId,
+            email: reply.marketingLead.email,
+            ...(reply.marketingLead.name ? { name: reply.marketingLead.name } : {}),
+          });
+          await recordWhatsAppConsent(db, {
+            contactId: inbound.contactId,
+            purpose: "marketing",
+            status: "granted",
+            evidence: { eventId, channel: "whatsapp", emailProvided: true },
+          });
         }
         if (reply.requiresHuman) {
           await requestWhatsAppHandoff(db, { conversationId: inbound.conversationId, reason: reply.intent, requestedBy: reply.intent === "human_handoff" ? "customer" : "bot", summary: message.text?.slice(0, 500) });

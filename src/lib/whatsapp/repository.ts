@@ -103,6 +103,36 @@ export async function recordWhatsAppConsent(
   if (error) throw error;
 }
 
+/** Stores optional contact details only after the customer expressly opts in. */
+export async function updateWhatsAppContactProfile(
+  db: SupabaseClient,
+  input: { contactId: string; email: string; name?: string },
+): Promise<void> {
+  const current = await db
+    .from("whatsapp_contacts")
+    .select("metadata")
+    .eq("id", input.contactId)
+    .single();
+  if (current.error) throw current.error;
+
+  const metadata =
+    typeof current.data.metadata === "object" && current.data.metadata !== null
+      ? (current.data.metadata as Record<string, unknown>)
+      : {};
+  const update = await db
+    .from("whatsapp_contacts")
+    .update({
+      ...(input.name ? { display_name: input.name.slice(0, 160) } : {}),
+      metadata: {
+        ...metadata,
+        email: input.email.toLowerCase().slice(0, 254),
+        emailSource: "whatsapp_marketing_opt_in",
+      },
+    })
+    .eq("id", input.contactId);
+  if (update.error) throw update.error;
+}
+
 export async function queueWhatsAppReply(
   db: SupabaseClient,
   input: {
