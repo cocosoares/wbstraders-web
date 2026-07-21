@@ -240,9 +240,15 @@ export async function syncGreenApiCatalog(args: {
     }
 
     try {
-      const providerResult = action === "create"
-        ? await client.createProduct(desired)
-        : await client.editProduct({ ...desired, productId: existing.id });
+      let providerResult: { productId?: string; edited?: boolean };
+      if (action === "create") {
+        providerResult = await client.createProduct(desired);
+      } else {
+        // `action` is derived from `existing`; keep this guard explicit for
+        // both TypeScript and a safe failure if a future refactor changes it.
+        if (!existing) throw new Error("GREEN_API_CATALOG_EXISTING_PRODUCT_MISSING");
+        providerResult = await client.editProduct({ ...desired, productId: existing.id });
+      }
       result.items.push({
         productId: product.id,
         action,
