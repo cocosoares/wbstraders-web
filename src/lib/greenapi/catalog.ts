@@ -12,7 +12,7 @@ export type GreenApiCatalogMode = "dry-run" | "sync";
 export type GreenApiCatalogProduct = {
   id: string;
   retailer_id?: string | null;
-  is_hidden?: boolean | null;
+  is_hidden?: boolean | string | null;
   name?: string | null;
   description?: string | null;
   price?: string | null;
@@ -118,16 +118,28 @@ function toMinorUnits(price: string | null | undefined): number | null {
   return Number.isSafeInteger(value) ? value : null;
 }
 
+function isHidden(value: GreenApiCatalogProduct["is_hidden"]): boolean {
+  return value === true || value === "true" || value === "TRUE";
+}
+
+function hasExpectedProviderPrice(existingPrice: string | null | undefined, desiredPrice: string): boolean {
+  const existing = toMinorUnits(existingPrice);
+  const desiredMinor = Math.round(Number(desiredPrice) * 100);
+  // Green API accepts a normal decimal price on mutation but currently returns
+  // it multiplied by ten in GetProducts (e.g. 83.90 -> "83900"). Accept both
+  // representations so a successful sync does not repeatedly edit the item.
+  return existing === desiredMinor || existing === desiredMinor * 10;
+}
+
 function shouldUpdate(existing: GreenApiCatalogProduct, desired: GreenApiCatalogPayload, force: boolean): boolean {
   if (force) return true;
-  const desiredMinor = Math.round(Number(desired.price) * 100);
   return (
     existing.name !== desired.name ||
     existing.description !== desired.description ||
     existing.currency !== desired.currency ||
     existing.url !== desired.url ||
-    Boolean(existing.is_hidden) !== desired.isHidden ||
-    toMinorUnits(existing.price) !== desiredMinor
+    isHidden(existing.is_hidden) !== desired.isHidden ||
+    !hasExpectedProviderPrice(existing.price, desired.price)
   );
 }
 

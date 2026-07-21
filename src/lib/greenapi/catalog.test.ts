@@ -85,4 +85,41 @@ describe("Green API catalog synchronization", () => {
       isHidden: false,
     }));
   });
+
+  it("recognizes Green API's returned price representation without editing again", async () => {
+    const desired = buildGreenApiCatalogPayload({
+      product: rn40,
+      siteUrl: "https://wbstraders.example",
+      hidden: true,
+    });
+    const client: GreenApiCatalogClient = {
+      getProducts: vi.fn().mockResolvedValue([
+        {
+          id: "provider-rn40",
+          retailer_id: rn40.id,
+          name: desired.name,
+          description: desired.description,
+          price: "83900",
+          currency: desired.currency,
+          url: desired.url,
+          is_hidden: "TRUE",
+        },
+      ]),
+      createProduct: vi.fn(),
+      editProduct: vi.fn(),
+    };
+
+    const result = await syncGreenApiCatalog({
+      mode: "sync",
+      productId: rn40.id,
+      forceHidden: true,
+      products: [rn40],
+      siteUrl: "https://wbstraders.example",
+      availability: new Map([[rn40.id, 1_000]]),
+      client,
+    });
+
+    expect(result).toMatchObject({ skipped: 1, created: 0, updated: 0, failed: 0 });
+    expect(client.editProduct).not.toHaveBeenCalled();
+  });
 });
