@@ -47,8 +47,18 @@ export function extractGreenApiMessage(event: GreenApiEvent): {
   const templateButtonReplyMessage = message.templateButtonReplyMessage as
     | Record<string, unknown>
     | undefined;
+  // GREEN API's current interactive reply method returns this payload when a
+  // customer taps one of the reply buttons. Keep it alongside the legacy
+  // button response formats for compatibility across WhatsApp clients.
+  const interactiveButtonsResponse = message.interactiveButtonsResponse as
+    | Record<string, unknown>
+    | undefined;
   const quoted = message.quotedMessage as Record<string, unknown> | undefined;
   const interactiveText =
+    (typeof interactiveButtonsResponse?.selectedDisplayText === "string" &&
+      interactiveButtonsResponse.selectedDisplayText) ||
+    (typeof interactiveButtonsResponse?.selectedId === "string" &&
+      interactiveButtonsResponse.selectedId) ||
     (typeof templateButtonReplyMessage?.selectedDisplayText === "string" &&
       templateButtonReplyMessage.selectedDisplayText) ||
     (typeof templateButtonReplyMessage?.selectedId === "string" &&

@@ -27,6 +27,26 @@ describe("GREEN API webhook", () => {
     expect(verifyGreenApiWebhookSecret(null, "correcto")).toBe(false);
   });
 
+  it("extracts selections sent through interactiveButtonsResponse", () => {
+    const event = greenApiEventSchema.parse({
+      typeWebhook: "incomingMessageReceived",
+      idMessage: "green-button-current-format",
+      senderData: { sender: "51900000003@c.us" },
+      messageData: {
+        typeMessage: "interactiveButtonsResponse",
+        interactiveButtonsResponse: {
+          selectedId: "occasion_seafood",
+          selectedDisplayText: "Ceviche / pescados",
+        },
+      },
+    });
+
+    expect(extractGreenApiMessage(event)).toMatchObject({
+      text: "Ceviche / pescados",
+      kind: "interactive",
+    });
+  });
+
   it("extracts the label selected from an interactive reply button", () => {
     const event = greenApiEventSchema.parse({
       typeWebhook: "incomingMessageReceived",

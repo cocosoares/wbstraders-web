@@ -19,6 +19,32 @@ describe("WhatsApp sommelier conversation", () => {
     expect(reply.replyButtons).toHaveLength(3);
   });
 
+  it("moves from a ceviche button to the format question", () => {
+    const reply = respondToWhatsApp({ message: "Ceviche / pescados" });
+
+    expect(reply.intent).toBe("qualification");
+    expect(reply.leadData?.occasion).toBe("ceviche y pescados");
+    expect(reply.replyButtons?.map((button) => button.id)).toContain("format_single");
+  });
+
+  it("moves from a gift button to the gift-or-toast question", () => {
+    const reply = respondToWhatsApp({ message: "Regalo / celebraciÃ³n" });
+
+    expect(reply.intent).toBe("qualification");
+    expect(reply.replyButtons?.map((button) => button.id)).toEqual([
+      "special_gift",
+      "special_toast",
+    ]);
+  });
+
+  it("uses a button identifier when the provider omits its visible label", () => {
+    const reply = respondToWhatsApp({ message: "occasion_seafood" });
+
+    expect(reply.intent).toBe("qualification");
+    expect(reply.leadData?.occasion).toBe("ceviche y pescados");
+    expect(reply.replyButtons?.map((button) => button.id)).toContain("format_single");
+  });
+
   it("uses conversation context to recommend a real catalog product with photo and checkout items", () => {
     const reply = respondToWhatsApp({
       message: "Pack con ahorro",

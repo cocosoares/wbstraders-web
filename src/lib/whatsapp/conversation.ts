@@ -66,6 +66,29 @@ const BUDGET_MENU: WhatsAppReplyButton[] = [
   { id: "budget_premium", text: "Más de S/250" },
 ];
 
+// GREEN API normally returns the visible button label, but some WhatsApp
+// clients return only `selectedId`. Translate the stable IDs so the sales
+// conversation always advances instead of asking the previous question again.
+const BUTTON_SELECTION_TEXT: Record<string, string> = {
+  "choose wine": "quiero elegir un vino",
+  "see packs": "quiero ver packs",
+  "track order": "mi pedido",
+  "occasion seafood": "ceviche y pescados",
+  "occasion grill": "parrilla y carnes",
+  "occasion gift": "regalo y celebracion",
+  "special gift": "regalo",
+  "special toast": "celebracion",
+  "style red": "tinto",
+  "style white": "blanco",
+  "style mix": "surtido",
+  "format single": "1 botella",
+  "format pack": "pack con ahorro",
+  "format case": "caja surtida",
+  "budget 100": "hasta s/100",
+  "budget 250": "s/100-250",
+  "budget premium": "mas de s/250",
+};
+
 function normalize(value: string) {
   return value
     .toLowerCase()
@@ -216,7 +239,9 @@ export function respondToWhatsApp(args: {
   /** Kept for backwards compatibility. The sales chat no longer asks for an age confirmation. */
   ageVerified?: boolean;
 }): WhatsAppBotReply {
-  const message = args.message.trim().slice(0, 1_500);
+  const incomingMessage = args.message.trim().slice(0, 1_500);
+  const normalizedIncomingMessage = normalize(incomingMessage);
+  const message = BUTTON_SELECTION_TEXT[normalizedIncomingMessage] ?? incomingMessage;
   const normalizedMessage = normalize(message);
   const context = buildContext(message, args.recentInboundMessages ?? []);
   const normalizedContext = normalize(context);
