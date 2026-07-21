@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Download } from "lucide-react";
 import { CatalogClient } from "./catalog-client";
 
 export const metadata: Metadata = {
@@ -25,6 +26,17 @@ export default async function CatalogPage({
         Vinos de autor importados directamente de Argentina. Mientras más
         botellas lleves, menos pagas por cada una — y puedes combinar cepas de
         una misma línea.
+      </p>
+      <a
+        href="/catalogos/fiestas-patrias-2026.pdf"
+        download
+        className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-wine-600 px-5 py-3 text-sm font-bold text-cream-50 transition-colors hover:bg-wine-700"
+      >
+        <Download className="h-4 w-4" aria-hidden="true" />
+        Descargar catálogo PDF
+      </a>
+      <p className="mt-2 text-xs text-ink-500">
+        Catálogo Fiestas Patrias 2026 · PDF de 5 páginas
       </p>
       <div className="mt-10">
         <CatalogClient initialType={params.tipo} initialBrand={params.bodega} />
