@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { BottleArt } from "@/components/bottle-art";
 import { PRODUCTS } from "@/data/products";
 import { SITE } from "@/data/site";
@@ -177,7 +177,7 @@ export function CartDrawer() {
                   onClick={closeCart}
                   className="rounded-lg bg-olive-600 px-6 py-3 font-semibold text-cream-50 transition-colors duration-200 hover:bg-olive-700"
                 >
-                  Explorar la cava
+                  Seguir comprando
                 </Link>
               </div>
             ) : (
@@ -283,6 +283,14 @@ export function CartDrawer() {
                   >
                     Ir a pagar
                     <ArrowRight className="h-5 w-5" />
+                  </Link>
+                  <Link
+                    href="/catalogo"
+                    onClick={closeCart}
+                    className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-cream-300 px-6 py-3 font-semibold text-ink-700 transition-colors duration-200 hover:bg-cream-200"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Seguir comprando
                   </Link>
                   <p className="mt-2 text-center text-xs text-ink-500">
                     Pago online seguro o coordinación asistida

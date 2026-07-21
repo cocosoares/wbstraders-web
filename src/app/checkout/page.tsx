@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { CheckoutClient } from "./checkout-client";
 import { isTestCheckoutEnabled } from "@/lib/orders/test-checkout";
 
@@ -30,6 +32,13 @@ export default function CheckoutPage() {
         considera confirmado después de una validación segura; WhatsApp queda
         como canal de asistencia y seguimiento.
       </p>
+      <Link
+        href="/catalogo"
+        className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl border border-cream-300 px-5 py-3 font-semibold text-ink-700 transition-colors hover:bg-cream-200"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Seguir comprando
+      </Link>
       <div className="mt-10">
         <CheckoutClient
           onlinePaymentEnabled={onlinePaymentEnabled}

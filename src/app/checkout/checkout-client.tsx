@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CreditCard, LoaderCircle, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CreditCard, LoaderCircle, ShieldCheck } from "lucide-react";
 import { allDistricts, findZoneByDistrict } from "@/data/delivery-zones";
 import { priceCart } from "@/lib/pricing";
 import { cn, formatPEN } from "@/lib/utils";
@@ -299,7 +299,7 @@ export function CheckoutClient({
           href="/catalogo"
           className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-wine-600 px-7 py-3 font-bold text-cream-50 hover:bg-wine-700"
         >
-          Elegir vinos
+          Seguir comprando
         </Link>
       </div>
     );
@@ -454,6 +454,13 @@ export function CheckoutClient({
           <button type="submit" disabled={submitting || !mounted} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-wine-600 px-6 py-3.5 font-bold text-cream-50 transition-colors hover:bg-wine-700 disabled:cursor-wait disabled:opacity-60">
             {submitting ? <><LoaderCircle className="h-5 w-5 animate-spin" /> Creando pedido…</> : <><CreditCard className="h-5 w-5" /> Crear pedido y continuar</>}
           </button>
+          <Link
+            href="/catalogo"
+            className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-cream-300 px-5 py-3 font-semibold text-ink-700 transition-colors hover:bg-cream-200"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Seguir comprando
+          </Link>
           <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-ink-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-olive-600" />El pago solo se confirma mediante el proveedor. No almacenamos datos de tarjeta.</p>
         </div>
       </aside>

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   AlertCircle,
+  ArrowLeft,
   CheckCircle2,
   Clock3,
   LoaderCircle,
@@ -139,6 +140,7 @@ export function PaymentResultClient({ initialResult }: { initialResult: string }
         <h1 className="mt-4 font-display text-3xl font-semibold">No pudimos verificar el pedido</h1>
         <p className="mx-auto mt-3 max-w-lg text-ink-700">{state.message} No realices un segundo pago sin confirmar primero el estado.</p>
         <button type="button" onClick={() => { setState({ kind: "loading" }); setAttempt((value) => value + 1); }} className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-olive-600 px-6 py-3 font-bold text-cream-50 hover:bg-olive-700"><RefreshCw className="h-4 w-4" /> Reintentar</button>
+        <Link href="/catalogo" className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-cream-300 px-6 py-3 font-semibold text-ink-700 hover:bg-cream-200"><ArrowLeft className="h-4 w-4" /> Seguir comprando</Link>
       </div>
     );
   }
@@ -180,7 +182,7 @@ export function PaymentResultClient({ initialResult }: { initialResult: string }
           <button type="button" onClick={() => { setState({ kind: "loading" }); setAttempt((value) => value + 1); }} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-olive-600 px-6 py-3 font-bold text-cream-50 hover:bg-olive-700"><RefreshCw className="h-4 w-4" /> Actualizar estado</button>
         )}
         <a href={`https://wa.me/${SITE.whatsapp}?text=${whatsappText}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-cream-300 bg-cream-50 px-6 py-3 font-bold text-ink-700 hover:bg-cream-200"><MessageCircle className="h-5 w-5" /> Ayuda por WhatsApp</a>
-        <Link href="/catalogo" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-cream-300 px-6 py-3 font-semibold text-ink-700 hover:bg-cream-200">Volver a la cava</Link>
+        <Link href="/catalogo" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-cream-300 px-6 py-3 font-semibold text-ink-700 hover:bg-cream-200"><ArrowLeft className="h-4 w-4" /> Seguir comprando</Link>
       </div>
     </div>
   );
