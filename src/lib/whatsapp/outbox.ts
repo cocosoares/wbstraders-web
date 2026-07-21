@@ -137,3 +137,19 @@ export async function dispatchWhatsAppOutbox(args: {
 
   return result;
 }
+
+/**
+ * Dispatches pending replies immediately after a webhook is processed. The
+ * scheduled worker remains in place as a retry mechanism for provider errors
+ * or unexpected process interruptions.
+ */
+export async function dispatchPendingWhatsAppOutbox(
+  db: SupabaseClient,
+  limit = 10,
+): Promise<WhatsAppOutboxResult> {
+  return dispatchWhatsAppOutbox({
+    limit: Math.min(10, Math.max(1, limit)),
+    claim: (workerId, count) => claimWhatsAppOutbox(db, workerId, count),
+    complete: (values) => completeWhatsAppOutbox(db, values),
+  });
+}

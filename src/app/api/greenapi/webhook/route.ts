@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import {
   claimWebhookEvent,
@@ -10,6 +10,7 @@ import { extractGreenApiMessage, greenApiEventSchema, verifyGreenApiWebhookSecre
 import { respondToWhatsApp } from "@/lib/whatsapp/conversation";
 import { createWhatsAppCheckoutSessionUrl } from "@/lib/whatsapp/cart-link";
 import { buildWhatsAppBotDelivery } from "@/lib/whatsapp/bot-delivery";
+import { dispatchPendingWhatsAppOutbox } from "@/lib/whatsapp/outbox";
 import {
   createWhatsAppCheckoutSession,
   getRecentWhatsAppInboundMessages,
@@ -123,6 +124,13 @@ export async function POST(request: Request) {
             kind: delivery.kind,
             metadata: delivery.metadata,
           });
+          // Send right away without making the webhook response wait for the
+          // provider. The minute-based worker still retries any failed send.
+          after(() =>
+            dispatchPendingWhatsAppOutbox(db).catch((error) => {
+              console.error("[whatsapp] immediate outbox dispatch failed", error);
+            }),
+          );
         }
       }
     }

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { claimWebhookEvent, finishWebhookEvent } from "@/lib/orders/webhooks";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -9,6 +9,7 @@ import {
 import { respondToWhatsApp } from "@/lib/whatsapp/conversation";
 import { createWhatsAppCheckoutSessionUrl } from "@/lib/whatsapp/cart-link";
 import { buildWhatsAppBotDelivery } from "@/lib/whatsapp/bot-delivery";
+import { dispatchPendingWhatsAppOutbox } from "@/lib/whatsapp/outbox";
 import {
   createWhatsAppCheckoutSession,
   getRecentWhatsAppInboundMessages,
@@ -159,6 +160,11 @@ export async function POST(request: Request) {
             kind: delivery.kind,
             metadata: delivery.metadata,
           });
+          after(() =>
+            dispatchPendingWhatsAppOutbox(db).catch((error) => {
+              console.error("[whatsapp] immediate outbox dispatch failed", error);
+            }),
+          );
         }
       }
     }

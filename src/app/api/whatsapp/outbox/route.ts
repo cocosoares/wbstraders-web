@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { verifyCronBearer } from "@/lib/ycloud/outbox";
 import {
-  claimWhatsAppOutbox,
-  completeWhatsAppOutbox,
-  dispatchWhatsAppOutbox,
+  dispatchPendingWhatsAppOutbox,
 } from "@/lib/whatsapp/outbox";
 
 export const runtime = "nodejs";
@@ -26,11 +24,7 @@ export async function POST(request: Request) {
   const limit = Number.isFinite(requestedLimit) ? Math.min(10, Math.max(1, requestedLimit)) : 5;
   try {
     const db = getSupabaseAdmin();
-    const result = await dispatchWhatsAppOutbox({
-      limit,
-      claim: (workerId, count) => claimWhatsAppOutbox(db, workerId, count),
-      complete: (values) => completeWhatsAppOutbox(db, values),
-    });
+    const result = await dispatchPendingWhatsAppOutbox(db, limit);
     return NextResponse.json(result, {
       status: result.finalizationErrors > 0 ? 500 : 200,
       headers: { "Cache-Control": "no-store" },
