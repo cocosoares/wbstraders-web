@@ -15,6 +15,7 @@ import {
   createWhatsAppCheckoutSession,
   getRecentWhatsAppInboundMessages,
   queueWhatsAppReply,
+  recordCrmSignal,
   recordWhatsAppConsent,
   recordWhatsAppInbound,
   requestWhatsAppHandoff,
@@ -81,6 +82,7 @@ export async function POST(request: Request) {
         replyToProviderMessageId: message.replyToMessageId,
         eventId,
         eventType: event.typeWebhook,
+        ...(message.media ? { media: message.media } : {}),
       });
       if (!inbound.duplicate) {
         const recentInboundMessages = await getRecentWhatsAppInboundMessages(
@@ -96,7 +98,15 @@ export async function POST(request: Request) {
             db,
             inbound.conversationId,
             reply.leadData,
+            reply.intent,
           );
+          await recordCrmSignal(db, {
+            contactId: inbound.contactId,
+            conversationId: inbound.conversationId,
+            eventKey: `${eventId}:qualification`,
+            eventType: "qualification",
+            metadata: reply.leadData,
+          });
         }
         if (reply.withdrawMarketingConsent) {
           await recordWhatsAppConsent(db, { contactId: inbound.contactId, purpose: "marketing", status: "withdrawn", evidence: { eventId, channel: "whatsapp" } });
@@ -116,6 +126,21 @@ export async function POST(request: Request) {
         }
         if (reply.requiresHuman) {
           await requestWhatsAppHandoff(db, { conversationId: inbound.conversationId, reason: reply.intent, requestedBy: reply.intent === "human_handoff" ? "customer" : "bot", summary: message.text?.slice(0, 500) });
+          await recordCrmSignal(db, {
+            contactId: inbound.contactId,
+            conversationId: inbound.conversationId,
+            eventKey: `${eventId}:handoff`,
+            eventType: "human_handoff",
+            metadata: { intent: reply.intent },
+          });
+        } else if (reply.intent === "recommendation" && reply.checkoutItems?.length) {
+          await recordCrmSignal(db, {
+            contactId: inbound.contactId,
+            conversationId: inbound.conversationId,
+            eventKey: `${eventId}:purchase-intent`,
+            eventType: "purchase_intent",
+            metadata: { products: reply.checkoutItems.map((item) => item.productId) },
+          });
         }
         const botEnabled = process.env.WHATSAPP_BOT_ENABLED?.trim().toLowerCase() === "true";
         const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://wbstraders.pe";

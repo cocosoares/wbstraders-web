@@ -45,6 +45,7 @@ export function extractYCloudMessage(event: YCloudEvent): {
   status?: string;
   type?: string;
   replyToMessageId?: string;
+  media?: { url?: string; fileName: string; mimeType?: string; caption?: string };
 } {
   const container = (event.whatsappInboundMessage ?? event.whatsappMessage) as Record<string, unknown> | undefined;
   if (!container) return {};
@@ -53,6 +54,9 @@ export function extractYCloudMessage(event: YCloudEvent): {
   const buttonReply = interactive?.buttonReply as Record<string, unknown> | undefined;
   const listReply = interactive?.listReply as Record<string, unknown> | undefined;
   const context = container.context as Record<string, unknown> | undefined;
+  const mediaObject = (["image", "document", "video", "audio", "sticker"] as const)
+    .map((key) => container[key])
+    .find((value) => typeof value === "object" && value !== null) as Record<string, unknown> | undefined;
   const interactiveText: string | undefined =
     (typeof buttonReply?.title === "string" && buttonReply.title) ||
     (typeof listReply?.title === "string" && listReply.title) ||
@@ -70,5 +74,23 @@ export function extractYCloudMessage(event: YCloudEvent): {
     type: typeof container.type === "string" ? container.type : undefined,
     replyToMessageId:
       typeof context?.messageId === "string" ? context.messageId : undefined,
+    media: mediaObject
+      ? {
+          ...((typeof mediaObject.link === "string" && /^https:\/\//i.test(mediaObject.link))
+            ? { url: mediaObject.link }
+            : {}),
+          fileName:
+            (typeof mediaObject.filename === "string" && mediaObject.filename.slice(0, 120)) ||
+            `archivo-${typeof container.id === "string" ? container.id : "whatsapp"}`,
+          ...(typeof mediaObject.mimeType === "string"
+            ? { mimeType: mediaObject.mimeType.slice(0, 120) }
+            : typeof mediaObject.mime_type === "string"
+              ? { mimeType: mediaObject.mime_type.slice(0, 120) }
+              : {}),
+          ...(typeof mediaObject.caption === "string"
+            ? { caption: mediaObject.caption.slice(0, 1_024) }
+            : {}),
+        }
+      : undefined,
   };
 }

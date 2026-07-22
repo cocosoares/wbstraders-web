@@ -48,13 +48,25 @@ export async function claimWhatsAppOutbox(
     .in("id", claimed.map((job) => job.messageId));
   if (messages.error) throw messages.error;
   const richByMessageId = new Map(
-    (messages.data ?? []).map((message) => {
+    await Promise.all((messages.data ?? []).map(async (message) => {
       const metadata =
         typeof message.metadata === "object" && message.metadata !== null
           ? (message.metadata as Record<string, unknown>)
           : {};
-      return [message.id, parseWhatsAppRichMessage(metadata.rich)] as const;
-    }),
+      const parsed = parseWhatsAppRichMessage(metadata.rich);
+      const media = parsed?.attachment ?? parsed?.image;
+      if (parsed && media?.storagePath && !media.url) {
+        const signed = await db.storage.from("whatsapp-media").createSignedUrl(media.storagePath, 15 * 60);
+        if (!signed.error && signed.data.signedUrl) {
+          const resolved = { ...media, url: signed.data.signedUrl };
+          return [message.id, {
+            ...parsed,
+            ...(parsed.attachment ? { attachment: resolved } : { image: resolved }),
+          }] as const;
+        }
+      }
+      return [message.id, parsed] as const;
+    })),
   );
   return claimed.map((job) => ({ ...job, rich: richByMessageId.get(job.messageId) }));
 }

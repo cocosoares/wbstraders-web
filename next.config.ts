@@ -19,15 +19,17 @@ const connectSources = [
   "https://www.googletagmanager.com",
   "https://*.googletagmanager.com",
   getSupabaseConnectSource(),
+  getSupabaseConnectSource()?.replace(/^https:/, "wss:"),
 ]
   .filter(Boolean)
   .join(" ");
+const supabaseSource = getSupabaseConnectSource();
 
 const productionCsp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://*.googletagmanager.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com",
+  `img-src 'self' data: blob: https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com${supabaseSource ? ` ${supabaseSource}` : ""}`,
   "font-src 'self' data:",
   `connect-src ${connectSources}`,
   "frame-src 'none'",
@@ -53,6 +55,7 @@ const nextConfig: NextConfig = {
   experimental: {
     cpus: 1,
     workerThreads: false,
+    serverActions: { bodySizeLimit: "10mb" },
   },
   async headers() {
     return [

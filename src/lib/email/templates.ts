@@ -1,5 +1,6 @@
 import type {
   ClaimEmailContext,
+  CrmAlertEmailContext,
   EmailJobKind,
   OrderEmailContext,
   RenderedEmail,
@@ -247,6 +248,30 @@ export function renderClaimEmail(kind: EmailJobKind, claim: ClaimEmailContext): 
       footer: "Confirmación transaccional del Libro de Reclamaciones. Este mensaje no modifica los plazos legales aplicables.",
     }),
     text: `Hola, ${firstName}. Recibimos tu ${claim.claimType} ${claim.claimNumber}. Conserva este número para el seguimiento.`,
+  };
+}
+
+export function renderCrmAlertEmail(
+  kind: "crm.handoff.operations" | "crm.sla_breached.operations",
+  alert: CrmAlertEmailContext,
+): RenderedEmail {
+  const customer = alert.customerName?.trim() || "Contacto de WhatsApp";
+  const adminUrl = `${siteUrl()}/admin/conversaciones?conversation=${encodeURIComponent(alert.conversationId)}`;
+  const breached = kind === "crm.sla_breached.operations";
+  const title = breached ? "Conversación fuera del SLA" : "Cliente solicita atención humana";
+  const time = breached ? alert.slaDueAt : alert.requestedAt;
+  return {
+    subject: breached
+      ? `SLA vencido · ${customer}`
+      : `Atención WhatsApp · ${customer}`,
+    html: layout({
+      eyebrow: breached ? "SLA de atención" : "Derivación de WhatsApp",
+      title,
+      bodyHtml: `<p><strong>Cliente:</strong> ${escapeHtml(customer)}<br><strong>Teléfono:</strong> ${escapeHtml(alert.phone || "No disponible")}<br><strong>Motivo:</strong> ${escapeHtml(alert.reason || "Atención comercial")}${time ? `<br><strong>Hora:</strong> ${escapeHtml(new Intl.DateTimeFormat("es-PE", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Lima" }).format(new Date(time)))}` : ""}</p>`,
+      cta: { label: "Abrir conversación", url: adminUrl },
+      footer: "Aviso interno del CRM. Contiene datos personales; no lo reenvíes fuera de WBStraders.",
+    }),
+    text: `${title}. Cliente: ${customer}. Teléfono: ${alert.phone || "No disponible"}. ${adminUrl}`,
   };
 }
 

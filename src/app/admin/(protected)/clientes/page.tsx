@@ -1,4 +1,5 @@
 import { Users } from "lucide-react";
+import Link from "next/link";
 import { AdminEmptyState } from "@/components/admin/empty-state";
 import { AdminTable, type AdminTableRow } from "@/components/admin/admin-table";
 import { loadCustomers } from "@/components/admin/admin-data";
@@ -14,9 +15,9 @@ export default async function AdminCustomersPage() {
             {
               label: "Cliente",
               value: (
-                <p className="font-semibold text-ink-900">
+                <Link href={`/admin/clientes/${customer.id}`} className="font-semibold text-olive-800 hover:underline">
                   {customer.name || "Cliente sin nombre"}
-                </p>
+                </Link>
               ),
             },
             {

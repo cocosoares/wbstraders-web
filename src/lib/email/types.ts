@@ -10,6 +10,8 @@ export const EMAIL_JOB_KINDS = [
   "fiscal.issued.customer",
   "claim.received.customer",
   "claim.received.operations",
+  "crm.handoff.operations",
+  "crm.sla_breached.operations",
   "marketing.contact_sync",
 ] as const;
 
@@ -68,6 +70,15 @@ export type MarketingContactContext = {
   email: string;
   name?: string;
   unsubscribed: boolean;
+};
+
+export type CrmAlertEmailContext = {
+  conversationId: string;
+  customerName?: string;
+  phone?: string;
+  reason?: string;
+  requestedAt?: string;
+  slaDueAt?: string;
 };
 
 export type RenderedEmail = {

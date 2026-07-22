@@ -37,6 +37,7 @@ export function extractGreenApiMessage(event: GreenApiEvent): {
   text?: string;
   kind: "text" | "interactive" | "media";
   replyToMessageId?: string;
+  media?: { url?: string; fileName: string; mimeType?: string; caption?: string };
 } {
   const message = event.messageData ?? {};
   const type = typeof message.typeMessage === "string" ? message.typeMessage : "";
@@ -54,6 +55,7 @@ export function extractGreenApiMessage(event: GreenApiEvent): {
     | Record<string, unknown>
     | undefined;
   const quoted = message.quotedMessage as Record<string, unknown> | undefined;
+  const fileMessageData = message.fileMessageData as Record<string, unknown> | undefined;
   const interactiveText =
     (typeof interactiveButtonsResponse?.selectedDisplayText === "string" &&
       interactiveButtonsResponse.selectedDisplayText) ||
@@ -72,12 +74,35 @@ export function extractGreenApiMessage(event: GreenApiEvent): {
     (typeof textMessageData?.textMessage === "string" && textMessageData.textMessage) ||
     (typeof extendedTextMessageData?.text === "string" && extendedTextMessageData.text) ||
     interactiveText ||
+    (typeof fileMessageData?.caption === "string" && fileMessageData.caption) ||
     undefined;
+  const mediaUrl =
+    (typeof fileMessageData?.downloadUrl === "string" && /^https:\/\//i.test(fileMessageData.downloadUrl)
+      ? fileMessageData.downloadUrl
+      : undefined) ||
+    (typeof fileMessageData?.urlFile === "string" && /^https:\/\//i.test(fileMessageData.urlFile)
+      ? fileMessageData.urlFile
+      : undefined);
+  const mediaFileName =
+    (typeof fileMessageData?.fileName === "string" && fileMessageData.fileName) ||
+    (type ? `archivo-${event.idMessage ?? "whatsapp"}` : undefined);
   return {
     phone: directPhone(event.senderData?.sender ?? event.senderData?.chatId),
     messageId: event.idMessage,
     text,
     kind: interactiveText ? "interactive" : text ? "text" : "media",
     replyToMessageId: typeof quoted?.stanzaId === "string" ? quoted.stanzaId : undefined,
+    media: mediaFileName
+      ? {
+          ...(mediaUrl ? { url: mediaUrl } : {}),
+          fileName: mediaFileName.slice(0, 120),
+          ...(typeof fileMessageData?.mimeType === "string"
+            ? { mimeType: fileMessageData.mimeType.slice(0, 120) }
+            : {}),
+          ...(typeof fileMessageData?.caption === "string"
+            ? { caption: fileMessageData.caption.slice(0, 1_024) }
+            : {}),
+        }
+      : undefined,
   };
 }

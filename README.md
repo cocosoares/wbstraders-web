@@ -133,6 +133,10 @@ Bearer. El endpoint procesa hasta 500 pedidos con reservas vencidas por defecto
 `FOR UPDATE SKIP LOCKED`, las marca `expired` y cambia a `unfulfilled` los pedidos
 que continúan impagos. Programarlo al menos cada cinco minutos.
 
+## CRM de WhatsApp
+
+La bandeja profesional, el cliente 360°, los pipelines D2C/HORECA, scoring, tareas y SLA se activan con `CRM_DASHBOARD_V2=true` después de aplicar la migración CRM. El procedimiento de publicación, cron y monitoreo está documentado en [docs/whatsapp-crm-operations.md](docs/whatsapp-crm-operations.md).
+
 ## Seguridad
 
 `.codex/`, `.mcp.json`, `.env` y variantes locales están ignorados. El token de Hostinger que apareció en el historial anterior debe rotarse desde la cuenta; excluirlo de Git evita nuevas filtraciones, pero no revoca la credencial ya expuesta.

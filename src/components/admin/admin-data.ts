@@ -50,10 +50,13 @@ export type AdminInventoryItem = {
 
 export type AdminOpportunity = {
   id: string;
+  customerId: string | null;
   title: string;
   segment: string;
   stage: string;
   customerName: string;
+  score: number;
+  sourceChannel: string;
   nextAction: string | null;
   nextActionAt: string | null;
   valueCents: number | null;
@@ -208,6 +211,8 @@ type OpportunityRow = {
   title: string;
   segment: string;
   stage: string;
+  score: number | null;
+  source_channel: string | null;
   next_action: string | null;
   next_action_at: string | null;
   value_cents: number | null;
@@ -468,7 +473,7 @@ export async function loadOpportunities(): Promise<
     const { data, error } = await supabase
       .from("opportunities")
       .select(
-        "id,customer_id,title,segment,stage,next_action,next_action_at,value_cents,currency",
+        "id,customer_id,title,segment,stage,score,source_channel,next_action,next_action_at,value_cents,currency",
       )
       .order("next_action_at", { ascending: true, nullsFirst: false })
       .limit(100);
@@ -495,12 +500,15 @@ export async function loadOpportunities(): Promise<
       state: "ready",
       data: opportunities.map((item) => ({
         id: item.id,
+        customerId: item.customer_id,
         title: item.title,
         segment: item.segment,
         stage: item.stage,
         customerName: item.customer_id
           ? customerNames.get(item.customer_id) || "Cliente sin nombre"
           : "Sin cliente asociado",
+        score: Number(item.score || 0),
+        sourceChannel: item.source_channel || "web",
         nextAction: item.next_action,
         nextActionAt: item.next_action_at,
         valueCents: item.value_cents,

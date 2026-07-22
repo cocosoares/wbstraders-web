@@ -13,9 +13,15 @@ import {
 } from "@/components/admin/admin-data";
 import { formatAdminCurrency, formatAdminDate } from "@/components/admin/format";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { CrmMetricsGrid } from "@/components/admin/crm-metrics";
+import { loadCrmInbox } from "@/lib/crm/admin";
 
 export default async function AdminDashboardPage() {
-  const result = await loadDashboard();
+  const crmEnabled = process.env.CRM_DASHBOARD_V2?.trim().toLowerCase() === "true";
+  const [result, crmResult] = await Promise.all([
+    loadDashboard(),
+    crmEnabled ? loadCrmInbox() : Promise.resolve(null),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -43,7 +49,18 @@ export default async function AdminDashboardPage() {
           description={result.message}
         />
       ) : (
-        <DashboardContent data={result.data} />
+        <>
+          {crmResult?.state === "ready" ? (
+            <section aria-labelledby="crm-metrics-title">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 id="crm-metrics-title" className="font-display text-2xl font-semibold text-ink-900">Ventas por WhatsApp</h2>
+                <a href="/admin/conversaciones" className="text-sm font-bold text-olive-800 hover:underline">Abrir CRM</a>
+              </div>
+              <CrmMetricsGrid metrics={crmResult.data.metrics} />
+            </section>
+          ) : null}
+          <DashboardContent data={result.data} />
+        </>
       )}
     </div>
   );

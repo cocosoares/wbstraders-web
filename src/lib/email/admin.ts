@@ -12,6 +12,8 @@ export const EMAIL_KIND_LABELS: Record<EmailJobKind, string> = {
   "fiscal.issued.customer": "Comprobante emitido",
   "claim.received.customer": "Reclamo recibido · cliente",
   "claim.received.operations": "Nuevo reclamo · operaciones",
+  "crm.handoff.operations": "Atención humana solicitada",
+  "crm.sla_breached.operations": "SLA de WhatsApp vencido",
   "marketing.contact_sync": "Sincronización de contacto",
 };
 

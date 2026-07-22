@@ -14,6 +14,7 @@ import {
   createWhatsAppCheckoutSession,
   getRecentWhatsAppInboundMessages,
   queueWhatsAppReply,
+  recordCrmSignal,
   recordWhatsAppConsent,
   recordWhatsAppInbound,
   requestWhatsAppHandoff,
@@ -93,6 +94,7 @@ export async function POST(request: Request) {
         replyToProviderMessageId: message.replyToMessageId,
         eventId: event.id,
         eventType: event.type,
+        media: message.media,
       });
 
       if (!inbound.duplicate) {
@@ -109,7 +111,15 @@ export async function POST(request: Request) {
             db,
             inbound.conversationId,
             reply.leadData,
+            reply.intent,
           );
+          await recordCrmSignal(db, {
+            contactId: inbound.contactId,
+            conversationId: inbound.conversationId,
+            eventKey: `${event.id}:qualification`,
+            eventType: "qualification",
+            metadata: reply.leadData,
+          });
         }
 
         if (reply.withdrawMarketingConsent) {
@@ -139,6 +149,21 @@ export async function POST(request: Request) {
             reason: reply.intent,
             requestedBy: reply.intent === "human_handoff" ? "customer" : "bot",
             summary: message.text?.slice(0, 500),
+          });
+          await recordCrmSignal(db, {
+            contactId: inbound.contactId,
+            conversationId: inbound.conversationId,
+            eventKey: `${event.id}:handoff`,
+            eventType: "human_handoff",
+            metadata: { intent: reply.intent },
+          });
+        } else if (reply.intent === "recommendation" && reply.checkoutItems?.length) {
+          await recordCrmSignal(db, {
+            contactId: inbound.contactId,
+            conversationId: inbound.conversationId,
+            eventKey: `${event.id}:purchase-intent`,
+            eventType: "purchase_intent",
+            metadata: { products: reply.checkoutItems.map((item) => item.productId) },
           });
         }
 

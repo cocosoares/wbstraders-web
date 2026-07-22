@@ -9,9 +9,11 @@ export type WhatsAppActionButton =
   | { type: "copy"; id: string; text: string; copyCode: string };
 
 export type WhatsAppMediaAttachment = {
-  url: string;
+  url?: string;
+  storagePath?: string;
   fileName: string;
   caption?: string;
+  mimeType?: string;
 };
 
 export type WhatsAppRichMessage = {
@@ -20,6 +22,7 @@ export type WhatsAppRichMessage = {
   replyButtons?: WhatsAppReplyButton[];
   actionButtons?: WhatsAppActionButton[];
   image?: WhatsAppMediaAttachment;
+  attachment?: WhatsAppMediaAttachment;
 };
 
 function shortString(value: unknown, maxLength: number): string | undefined {
@@ -36,6 +39,31 @@ function safeHttpsUrl(value: unknown): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function safeStoragePath(value: unknown): string | undefined {
+  const path = shortString(value, 500);
+  return path && /^[a-zA-Z0-9/_-]+\.[a-zA-Z0-9]{2,5}$/.test(path)
+    ? path
+    : undefined;
+}
+
+function parseMedia(value: unknown): WhatsAppMediaAttachment | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const media = value as Record<string, unknown>;
+  const url = safeHttpsUrl(media.url);
+  const storagePath = safeStoragePath(media.storagePath);
+  const fileName = shortString(media.fileName, 120)?.replace(/[^a-zA-Z0-9._-]/g, "-");
+  if ((!url && !storagePath) || !fileName || !/\.[a-zA-Z0-9]{2,5}$/.test(fileName)) {
+    return undefined;
+  }
+  return {
+    ...(url ? { url } : {}),
+    ...(storagePath ? { storagePath } : {}),
+    fileName,
+    ...(shortString(media.caption, 1_024) ? { caption: shortString(media.caption, 1_024) } : {}),
+    ...(shortString(media.mimeType, 120) ? { mimeType: shortString(media.mimeType, 120) } : {}),
+  };
 }
 
 export function parseWhatsAppRichMessage(value: unknown): WhatsAppRichMessage | undefined {
@@ -82,17 +110,10 @@ export function parseWhatsAppRichMessage(value: unknown): WhatsAppRichMessage | 
         .slice(0, 3)
     : undefined;
 
-  let image: WhatsAppMediaAttachment | undefined;
-  if (typeof source.image === "object" && source.image !== null) {
-    const media = source.image as Record<string, unknown>;
-    const url = safeHttpsUrl(media.url);
-    const fileName = shortString(media.fileName, 120)?.replace(/[^a-zA-Z0-9._-]/g, "-");
-    if (url && fileName && /\.[a-zA-Z0-9]{2,5}$/.test(fileName)) {
-      image = { url, fileName, caption: shortString(media.caption, 1_024) };
-    }
-  }
+  const image = parseMedia(source.image);
+  const attachment = parseMedia(source.attachment);
 
-  if (!header && !footer && !replyButtons?.length && !actionButtons?.length && !image) {
+  if (!header && !footer && !replyButtons?.length && !actionButtons?.length && !image && !attachment) {
     return undefined;
   }
   return {
@@ -101,6 +122,7 @@ export function parseWhatsAppRichMessage(value: unknown): WhatsAppRichMessage | 
     ...(replyButtons?.length ? { replyButtons } : {}),
     ...(actionButtons?.length ? { actionButtons } : {}),
     ...(image ? { image } : {}),
+    ...(attachment ? { attachment } : {}),
   };
 }
 
@@ -115,6 +137,10 @@ export function whatsappTextFallback(text: string, rich?: WhatsAppRichMessage): 
       if (button.type === "call") fallback += `\n\n${button.text}: ${button.phoneNumber}`;
       if (button.type === "copy") fallback += `\n\n${button.text}: ${button.copyCode}`;
     }
+  }
+  const media = rich?.attachment ?? rich?.image;
+  if (media?.url && !rich?.actionButtons?.some((button) => button.type === "url" && button.url === media.url)) {
+    fallback += `\n\n${media.fileName}: ${media.url}`;
   }
   return fallback.slice(0, 4_000);
 }

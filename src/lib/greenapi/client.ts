@@ -81,12 +81,13 @@ export async function sendGreenApiMessage(args: {
   // The product photo is helpful but not allowed to block the sales reply.
   // Green API accepts one media file per request, so it is sent immediately
   // before the interactive message.
-  if (rich?.image) {
+  const media = rich?.attachment ?? rich?.image;
+  if (media?.url) {
     await sendGreenApiRequest(config, "sendFileByUrl", {
       chatId,
-      urlFile: rich.image.url,
-      fileName: rich.image.fileName,
-      ...(rich.image.caption ? { caption: rich.image.caption } : {}),
+      urlFile: media.url,
+      fileName: media.fileName,
+      ...(media.caption ? { caption: media.caption } : {}),
     });
   }
 

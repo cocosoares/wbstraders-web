@@ -42,6 +42,7 @@ export async function recordWhatsAppInbound(
     replyToProviderMessageId?: string;
     eventId: string;
     eventType: string;
+    media?: { url?: string; fileName: string; mimeType?: string; caption?: string };
   },
 ): Promise<WhatsAppInboundRecord> {
   const { data, error } = await db.rpc("record_whatsapp_inbound", {
@@ -50,7 +51,10 @@ export async function recordWhatsAppInbound(
     p_message_kind: input.kind,
     p_body: input.body?.slice(0, 4_000) ?? "",
     p_reply_to_provider_message_id: input.replyToProviderMessageId ?? null,
-    p_metadata: { eventType: input.eventType },
+    p_metadata: {
+      eventType: input.eventType,
+      ...(input.media ? { attachment: input.media } : {}),
+    },
   });
   if (error) throw error;
   const row = Array.isArray(data) ? (data[0] as RpcRow | undefined) : undefined;
@@ -64,7 +68,13 @@ export async function recordWhatsAppInbound(
       conversation_id: row.conversation_id,
       message_id: row.message_id,
       event_type: input.eventType,
-      payload: { messageKind: input.kind, sourceProvider: input.provider },
+      payload: {
+        messageKind: input.kind,
+        sourceProvider: input.provider,
+        ...(input.media
+          ? { media: { fileName: input.media.fileName, mimeType: input.media.mimeType ?? null } }
+          : {}),
+      },
     };
     let event = await db.from("whatsapp_events").insert(values);
     if (input.provider === "greenapi" && isMissingGreenApiEventProvider(event.error)) {
@@ -131,6 +141,27 @@ export async function updateWhatsAppContactProfile(
     })
     .eq("id", input.contactId);
   if (update.error) throw update.error;
+
+  const linked = await db.rpc("ensure_crm_customer_for_contact", {
+    p_contact_id: input.contactId,
+    p_name: input.name ?? null,
+    p_actor_id: null,
+  });
+  if (linked.error && !linked.error.message.includes("function public.ensure_crm_customer_for_contact")) {
+    throw linked.error;
+  }
+  const customerId = typeof linked.data === "string" ? linked.data : null;
+  if (customerId) {
+    const customerUpdate = await db
+      .from("customers")
+      .update({
+        email: input.email.toLowerCase().slice(0, 254),
+        ...(input.name ? { name: input.name.slice(0, 160) } : {}),
+        last_activity_at: new Date().toISOString(),
+      })
+      .eq("id", customerId);
+    if (customerUpdate.error) throw customerUpdate.error;
+  }
 }
 
 export async function queueWhatsAppReply(
@@ -185,6 +216,7 @@ export async function updateWhatsAppConversationQualification(
     purchaseFormat?: string;
     budget?: string;
   },
+  intent?: string,
 ): Promise<void> {
   const safeQualification = Object.fromEntries(
     Object.entries(qualification).flatMap(([key, value]) =>
@@ -210,6 +242,7 @@ export async function updateWhatsAppConversationQualification(
   const updated = await db
     .from("whatsapp_conversations")
     .update({
+      ...(intent ? { current_intent: intent.slice(0, 120) } : {}),
       metadata: {
         ...metadata,
         qualification: { ...previousQualification, ...safeQualification },
@@ -217,6 +250,33 @@ export async function updateWhatsAppConversationQualification(
     })
     .eq("id", conversationId);
   if (updated.error) throw updated.error;
+}
+
+export async function recordCrmSignal(
+  db: SupabaseClient,
+  input: {
+    contactId: string;
+    conversationId: string;
+    eventKey: string;
+    eventType:
+      | "qualification"
+      | "purchase_intent"
+      | "human_handoff"
+      | "checkout_started"
+      | "purchase_confirmed";
+    metadata?: Record<string, unknown>;
+  },
+): Promise<void> {
+  const { error } = await db.rpc("record_crm_signal", {
+    p_contact_id: input.contactId,
+    p_conversation_id: input.conversationId,
+    p_event_key: input.eventKey.slice(0, 240),
+    p_event_type: input.eventType,
+    p_metadata: input.metadata ?? {},
+  });
+  // During a staggered deploy the app may reach a server before its database
+  // migration. WhatsApp remains available and the retry is safe after deploy.
+  if (error && !error.message.includes("function public.record_crm_signal")) throw error;
 }
 
 export async function requestWhatsAppHandoff(
