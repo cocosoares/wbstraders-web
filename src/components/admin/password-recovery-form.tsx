@@ -5,6 +5,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { ArrowLeft, CheckCircle2, LoaderCircle } from "lucide-react";
+import { parseRecoveryLink } from "@/lib/supabase/recovery";
 
 type RecoveryState = "checking" | "request" | "reset" | "sent" | "error";
 
@@ -12,6 +13,13 @@ function browserSupabase() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        // The recovery page exchanges every supported link format explicitly.
+        // This avoids racing Supabase's automatic PKCE exchange with our own.
+        detectSessionInUrl: false,
+      },
+    },
   );
 }
 
@@ -32,23 +40,49 @@ export function PasswordRecoveryForm({ configured }: { configured: boolean }) {
       return;
     }
 
+    const recovery = parseRecoveryLink(window.location.href);
     const supabase = browserSupabase();
     let active = true;
-    let recoveryDetected = window.location.hash.includes("type=recovery");
-    const code = new URLSearchParams(window.location.search).get("code");
 
     async function resolveRecoverySession() {
       try {
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
-          recoveryDetected = true;
-          window.history.replaceState({}, document.title, window.location.pathname);
+        if (recovery.error) throw new Error(recovery.error);
+
+        let session = null;
+        if (recovery.code) {
+          const result = await supabase.auth.exchangeCodeForSession(recovery.code);
+          if (result.error) throw result.error;
+          session = result.data.session;
+        } else if (recovery.tokenHash && recovery.type === "recovery") {
+          const result = await supabase.auth.verifyOtp({
+            token_hash: recovery.tokenHash,
+            type: "recovery",
+          });
+          if (result.error) throw result.error;
+          session = result.data.session;
+        } else if (recovery.accessToken && recovery.refreshToken) {
+          const result = await supabase.auth.setSession({
+            access_token: recovery.accessToken,
+            refresh_token: recovery.refreshToken,
+          });
+          if (result.error) throw result.error;
+          session = result.data.session;
+        } else if (recovery.isRecovery) {
+          const result = await supabase.auth.getSession();
+          if (result.error) throw result.error;
+          session = result.data.session;
         }
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (active) setState(recoveryDetected && session ? "reset" : "request");
+
+        if (!active) return;
+        if (recovery.isRecovery && session) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setState("reset");
+        } else if (recovery.isRecovery) {
+          setState("error");
+          setMessage("El enlace ya venció o no pudo crear una sesión segura. Solicita uno nuevo.");
+        } else {
+          setState("request");
+        }
       } catch {
         if (active) {
           setState("error");
@@ -59,7 +93,7 @@ export function PasswordRecoveryForm({ configured }: { configured: boolean }) {
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" && session && active) {
-        recoveryDetected = true;
+        window.history.replaceState({}, document.title, window.location.pathname);
         setState("reset");
       }
     });
