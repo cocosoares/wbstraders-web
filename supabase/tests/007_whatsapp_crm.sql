@@ -120,10 +120,10 @@ begin
 
   v_task := public.admin_manage_crm_task(
     null, 'create', 'Confirmar dirección', 'Validar distrito y horario', now(),
-    v_customer, v_conversation, v_opportunity, 2, v_actor
+    v_customer, v_conversation, v_opportunity, 2::smallint, v_actor
   );
   perform public.admin_manage_crm_task(
-    v_task, 'complete', null, null, null, null, null, null, 2, v_actor
+    v_task, 'complete', null, null, null, null, null, null, 2::smallint, v_actor
   );
   if not exists (
     select 1 from public.activities where id = v_task and status = 'completed'
