@@ -13,14 +13,17 @@ import { buildWhatsAppBotDelivery } from "@/lib/whatsapp/bot-delivery";
 import { dispatchPendingWhatsAppOutbox } from "@/lib/whatsapp/outbox";
 import {
   createWhatsAppCheckoutSession,
+  getWhatsAppConversationJourney,
   getRecentWhatsAppInboundMessages,
+  hasNewWhatsAppQualification,
   queueWhatsAppReply,
   recordCrmSignal,
   recordWhatsAppConsent,
   recordWhatsAppInbound,
   requestWhatsAppHandoff,
   updateWhatsAppContactProfile,
-  updateWhatsAppConversationQualification,
+  updateWhatsAppConversationJourney,
+  upsertHorecaWhatsAppOpportunity,
 } from "@/lib/whatsapp/repository";
 
 export const runtime = "nodejs";
@@ -85,27 +88,28 @@ export async function POST(request: Request) {
         ...(message.media ? { media: message.media } : {}),
       });
       if (!inbound.duplicate) {
-        const recentInboundMessages = await getRecentWhatsAppInboundMessages(
-          db,
-          inbound.conversationId,
-        );
+        const [recentInboundMessages, journey] = await Promise.all([
+          getRecentWhatsAppInboundMessages(db, inbound.conversationId),
+          getWhatsAppConversationJourney(db, inbound.conversationId),
+        ]);
         const reply = respondToWhatsApp({
           message: message.text ?? "",
           recentInboundMessages,
+          journey,
         });
-        if (reply.leadData) {
-          await updateWhatsAppConversationQualification(
-            db,
-            inbound.conversationId,
-            reply.leadData,
-            reply.intent,
-          );
+        const qualificationChanged = hasNewWhatsAppQualification(journey, reply.leadData);
+        await updateWhatsAppConversationJourney(db, inbound.conversationId, {
+          journey: reply.journey,
+          qualification: reply.leadData,
+          intent: reply.intent,
+        });
+        if (reply.leadData && qualificationChanged) {
           await recordCrmSignal(db, {
             contactId: inbound.contactId,
             conversationId: inbound.conversationId,
             eventKey: `${eventId}:qualification`,
             eventType: "qualification",
-            metadata: reply.leadData,
+            metadata: { ...reply.leadData, funnelStage: reply.journey?.stage ?? null },
           });
         }
         if (reply.withdrawMarketingConsent) {
@@ -126,13 +130,21 @@ export async function POST(request: Request) {
         }
         if (reply.requiresHuman) {
           await requestWhatsAppHandoff(db, { conversationId: inbound.conversationId, reason: reply.intent, requestedBy: reply.intent === "human_handoff" ? "customer" : "bot", summary: message.text?.slice(0, 500) });
-          await recordCrmSignal(db, {
-            contactId: inbound.contactId,
-            conversationId: inbound.conversationId,
-            eventKey: `${eventId}:handoff`,
-            eventType: "human_handoff",
-            metadata: { intent: reply.intent },
-          });
+          if (reply.journey?.path === "horeca") {
+            await upsertHorecaWhatsAppOpportunity(db, {
+              contactId: inbound.contactId,
+              conversationId: inbound.conversationId,
+              qualification: reply.leadData ?? { customerType: "horeca" },
+            });
+          } else {
+            await recordCrmSignal(db, {
+              contactId: inbound.contactId,
+              conversationId: inbound.conversationId,
+              eventKey: `${eventId}:handoff`,
+              eventType: "human_handoff",
+              metadata: { intent: reply.intent },
+            });
+          }
         } else if (reply.intent === "recommendation" && reply.checkoutItems?.length) {
           await recordCrmSignal(db, {
             contactId: inbound.contactId,

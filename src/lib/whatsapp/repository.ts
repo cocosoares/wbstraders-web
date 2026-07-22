@@ -2,6 +2,12 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { WhatsAppCartItem } from "./cart-link";
+import {
+  mergeWhatsAppQualification,
+  parseWhatsAppJourney,
+  type WhatsAppJourneyState,
+  type WhatsAppQualificationData,
+} from "./journey";
 
 export type WhatsAppInboundRecord = {
   contactId: string;
@@ -207,49 +213,115 @@ export async function getRecentWhatsAppInboundMessages(
     .reverse();
 }
 
-export async function updateWhatsAppConversationQualification(
+function metadataRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function legacyQualification(metadata: Record<string, unknown>): WhatsAppQualificationData | undefined {
+  return parseWhatsAppJourney({
+    path: "wine",
+    stage: "wine_occasion",
+    qualification: metadata.qualification,
+  })?.qualification;
+}
+
+/** Reads the compact bot state persisted on the conversation, not message history. */
+export async function getWhatsAppConversationJourney(
   db: SupabaseClient,
   conversationId: string,
-  qualification: {
-    occasion?: string;
-    wineStyle?: string;
-    purchaseFormat?: string;
-    budget?: string;
-  },
-  intent?: string,
-): Promise<void> {
-  const safeQualification = Object.fromEntries(
-    Object.entries(qualification).flatMap(([key, value]) =>
-      typeof value === "string" && value.trim() ? [[key.slice(0, 80), value.trim().slice(0, 160)]] : [],
-    ),
-  );
-  if (!Object.keys(safeQualification).length) return;
-
+): Promise<WhatsAppJourneyState | undefined> {
   const current = await db
     .from("whatsapp_conversations")
     .select("metadata")
     .eq("id", conversationId)
     .single();
   if (current.error) throw current.error;
-  const metadata =
-    typeof current.data.metadata === "object" && current.data.metadata !== null
-      ? (current.data.metadata as Record<string, unknown>)
-      : {};
-  const previousQualification =
-    typeof metadata.qualification === "object" && metadata.qualification !== null
-      ? (metadata.qualification as Record<string, unknown>)
-      : {};
-  const updated = await db
+  const metadata = metadataRecord(current.data.metadata);
+  const journey = parseWhatsAppJourney(metadata.journey);
+  if (journey) return journey;
+  const qualification = legacyQualification(metadata);
+  return qualification
+    ? { path: "wine", stage: "wine_occasion", qualification }
+    : undefined;
+}
+
+export function hasNewWhatsAppQualification(
+  previous: WhatsAppJourneyState | undefined,
+  next: WhatsAppQualificationData | undefined,
+): boolean {
+  return Object.entries(next ?? {}).some(
+    ([key, value]) => value !== undefined && previous?.qualification?.[key as keyof WhatsAppQualificationData] !== value,
+  );
+}
+
+/**
+ * Persists the current funnel step together with the collected preferences.
+ * Keeping it in conversation metadata avoids a schema migration while still
+ * making the bot deterministic after a delayed reply or a new webhook.
+ */
+export async function updateWhatsAppConversationJourney(
+  db: SupabaseClient,
+  conversationId: string,
+  input: {
+    journey?: WhatsAppJourneyState;
+    qualification?: WhatsAppQualificationData;
+    intent?: string;
+  },
+): Promise<void> {
+  if (!input.journey && !input.qualification && !input.intent) return;
+  const current = await db
+    .from("whatsapp_conversations")
+    .select("metadata")
+    .eq("id", conversationId)
+    .single();
+  if (current.error) throw current.error;
+
+  const metadata = metadataRecord(current.data.metadata);
+  const currentJourney = parseWhatsAppJourney(metadata.journey);
+  const qualification = mergeWhatsAppQualification(
+    currentJourney?.qualification ?? legacyQualification(metadata),
+    input.qualification ?? input.journey?.qualification,
+  );
+  const nextJourney = input.journey
+    ? {
+        ...input.journey,
+        ...(qualification ? { qualification } : {}),
+        updatedAt: new Date().toISOString(),
+      }
+    : currentJourney
+      ? {
+          ...currentJourney,
+          ...(qualification ? { qualification } : {}),
+          updatedAt: new Date().toISOString(),
+        }
+      : undefined;
+
+  const update = await db
     .from("whatsapp_conversations")
     .update({
-      ...(intent ? { current_intent: intent.slice(0, 120) } : {}),
+      ...(input.intent ? { current_intent: input.intent.slice(0, 120) } : {}),
       metadata: {
         ...metadata,
-        qualification: { ...previousQualification, ...safeQualification },
+        ...(qualification ? { qualification } : {}),
+        ...(nextJourney ? { journey: nextJourney } : {}),
       },
     })
     .eq("id", conversationId);
-  if (updated.error) throw updated.error;
+  if (update.error) throw update.error;
+}
+
+export async function updateWhatsAppConversationQualification(
+  db: SupabaseClient,
+  conversationId: string,
+  qualification: WhatsAppQualificationData,
+  intent?: string,
+): Promise<void> {
+  await updateWhatsAppConversationJourney(db, conversationId, {
+    qualification,
+    intent,
+  });
 }
 
 export async function recordCrmSignal(
@@ -277,6 +349,91 @@ export async function recordCrmSignal(
   // During a staggered deploy the app may reach a server before its database
   // migration. WhatsApp remains available and the retry is safe after deploy.
   if (error && !error.message.includes("function public.record_crm_signal")) throw error;
+}
+
+/**
+ * HORECA is a separate sales motion. Keep it out of the D2C signal function so
+ * a restaurant inquiry never lands in the consumer checkout pipeline.
+ */
+export async function upsertHorecaWhatsAppOpportunity(
+  db: SupabaseClient,
+  input: {
+    contactId: string;
+    conversationId: string;
+    qualification: WhatsAppQualificationData;
+  },
+): Promise<void> {
+  const ensured = await db.rpc("ensure_crm_customer_for_contact", {
+    p_contact_id: input.contactId,
+    p_name: null,
+    p_actor_id: null,
+  });
+  if (ensured.error) throw ensured.error;
+  const customerId = typeof ensured.data === "string" ? ensured.data : null;
+  if (!customerId) throw new Error("horeca_customer_not_created");
+
+  const contact = await db
+    .from("whatsapp_contacts")
+    .select("display_name")
+    .eq("id", input.contactId)
+    .single();
+  if (contact.error) throw contact.error;
+
+  const customerUpdate = await db
+    .from("customers")
+    .update({
+      lifecycle_stage: "horeca",
+      source_channel: "horeca",
+      last_activity_at: new Date().toISOString(),
+    })
+    .eq("id", customerId);
+  if (customerUpdate.error) throw customerUpdate.error;
+
+  const existing = await db
+    .from("opportunities")
+    .select("id, metadata")
+    .eq("segment", "horeca")
+    .eq("source_conversation_id", input.conversationId)
+    .not("stage", "in", "(won,lost)")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (existing.error) throw existing.error;
+
+  const metadata = {
+    ...(typeof existing.data?.metadata === "object" && existing.data.metadata !== null
+      ? (existing.data.metadata as Record<string, unknown>)
+      : {}),
+    qualification: input.qualification,
+    source: "whatsapp_horeca_funnel",
+  };
+  if (existing.data?.id) {
+    const updated = await db
+      .from("opportunities")
+      .update({
+        score: 50,
+        next_action: "Contactar y preparar propuesta comercial",
+        next_action_at: new Date().toISOString(),
+        metadata,
+      })
+      .eq("id", existing.data.id);
+    if (updated.error) throw updated.error;
+    return;
+  }
+
+  const created = await db.from("opportunities").insert({
+    customer_id: customerId,
+    segment: "horeca",
+    stage: "lead",
+    title: `Oportunidad HORECA WhatsApp · ${contact.data.display_name || "Contacto"}`,
+    source_channel: "horeca",
+    source_conversation_id: input.conversationId,
+    score: 50,
+    next_action: "Contactar y preparar propuesta comercial",
+    next_action_at: new Date().toISOString(),
+    metadata,
+  });
+  if (created.error) throw created.error;
 }
 
 export async function requestWhatsAppHandoff(

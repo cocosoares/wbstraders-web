@@ -4,6 +4,14 @@ import { discreteTotalCents, tierUnitCents } from "@/lib/pricing";
 import { localRecommend } from "@/lib/sommelier";
 import { formatPEN } from "@/lib/utils";
 import type { WhatsAppCartItem } from "./cart-link";
+import {
+  isWhatsAppJourneyFresh,
+  mergeWhatsAppQualification,
+  type WhatsAppJourneyPath,
+  type WhatsAppJourneyStage,
+  type WhatsAppJourneyState,
+  type WhatsAppQualificationData,
+} from "./journey";
 import type { WhatsAppActionButton, WhatsAppReplyButton } from "./rich-message";
 
 export type WhatsAppIntent =
@@ -16,14 +24,10 @@ export type WhatsAppIntent =
   | "catalog"
   | "lead_capture"
   | "human_handoff"
+  | "horeca"
   | "opt_out";
 
-export type WhatsAppLeadData = {
-  occasion?: string;
-  wineStyle?: string;
-  purchaseFormat?: "single" | "pack" | "case";
-  budget?: "under_100" | "100_250" | "over_250";
-};
+export type WhatsAppLeadData = WhatsAppQualificationData;
 
 export type WhatsAppBotReply = {
   intent: WhatsAppIntent;
@@ -35,6 +39,7 @@ export type WhatsAppBotReply = {
   productImage?: { path: string; fileName: string; caption: string };
   footer?: string;
   leadData?: WhatsAppLeadData;
+  journey?: WhatsAppJourneyState;
   marketingLead?: { email: string; name?: string };
   requiresHuman?: boolean;
   withdrawMarketingConsent?: boolean;
@@ -43,6 +48,7 @@ export type WhatsAppBotReply = {
 const MAIN_MENU: WhatsAppReplyButton[] = [
   { id: "choose_wine", text: "Elegir un vino 🍷" },
   { id: "see_catalog", text: "Ver catálogo 📚" },
+  { id: "see_promotions", text: "Promociones ✨" },
 ];
 
 const OCCASION_MENU: WhatsAppReplyButton[] = [
@@ -74,6 +80,18 @@ const CATALOG_MENU: WhatsAppReplyButton[] = [
   { id: "catalog_fresh", text: "Blancos y brindis 🥂" },
 ];
 
+const HORECA_BUSINESS_MENU: WhatsAppReplyButton[] = [
+  { id: "horeca_restaurant", text: "Restaurante 🍽️" },
+  { id: "horeca_hotel", text: "Hotel 🏨" },
+  { id: "horeca_bar", text: "Bar / tienda 🍷" },
+];
+
+const HORECA_VOLUME_MENU: WhatsAppReplyButton[] = [
+  { id: "horeca_6_12", text: "6–12 botellas" },
+  { id: "horeca_13_48", text: "13–48 botellas" },
+  { id: "horeca_49_plus", text: "49+ botellas" },
+];
+
 // GREEN API normally returns the visible button label, but some WhatsApp
 // clients return only `selectedId`. Translate the stable IDs so the sales
 // conversation always advances instead of asking the previous question again.
@@ -81,6 +99,13 @@ const BUTTON_SELECTION_TEXT: Record<string, string> = {
   "choose wine": "quiero elegir un vino",
   "see packs": "quiero ver packs",
   "see catalog": "ver catalogo",
+  "see promotions": "quiero ver promociones",
+  "horeca restaurant": "restaurante horeca",
+  "horeca hotel": "hotel horeca",
+  "horeca bar": "bar horeca",
+  "horeca 6 12": "6 12 botellas horeca",
+  "horeca 13 48": "13 48 botellas horeca",
+  "horeca 49 plus": "49 botellas horeca",
   "track order": "mi pedido",
   "catalog reds": "catalogo tintos",
   "catalog fresh": "catalogo blancos y brindis",
@@ -108,6 +133,74 @@ function normalize(value: string) {
     .replace(/[^a-z0-9+\s/.-]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function journey(
+  path: WhatsAppJourneyPath,
+  stage: WhatsAppJourneyStage,
+  leadData?: WhatsAppLeadData,
+): WhatsAppJourneyState {
+  return {
+    path,
+    stage,
+    ...(leadData && Object.keys(leadData).length ? { qualification: leadData } : {}),
+  };
+}
+
+function isHorecaIntent(value: string): boolean {
+  return /\b(horeca|restaurante|restaurant|hotel|bar|cafeteria|empresa|corporativ|mayorista|distribuidor|volumen)\b/.test(
+    value,
+  );
+}
+
+function detectHorecaBusiness(value: string): WhatsAppLeadData["horecaBusinessType"] {
+  if (/restaurante|restaurant/.test(value)) return "restaurant";
+  if (/hotel/.test(value)) return "hotel";
+  if (/bar|tienda|licoreria|licorería/.test(value)) return "bar";
+  if (/empresa|corporativ|evento/.test(value)) return "company";
+  if (/otro/.test(value)) return "other";
+  return undefined;
+}
+
+function detectHorecaVolume(value: string): WhatsAppLeadData["horecaVolume"] {
+  if (/(49\+|49 mas|50\+|50 mas|mayorista|volumen)/.test(value)) return "49_plus";
+  if (/(13\s*(?:-|a)\s*48|13 48)/.test(value)) return "13_48";
+  if (/(6\s*(?:-|a)\s*12|6 12)/.test(value)) return "6_12";
+  return undefined;
+}
+
+function horecaReply(leadData: WhatsAppLeadData): WhatsAppBotReply {
+  if (!leadData.horecaBusinessType) {
+    return {
+      intent: "horeca",
+      text: "¡Excelente! 🍷 Preparamos propuestas para restaurantes, hoteles, bares y empresas. ¿Qué tipo de negocio tienes?",
+      suggestionSlugs: [],
+      replyButtons: HORECA_BUSINESS_MENU,
+      footer: "También puedes escribir tu tipo de negocio y la cantidad aproximada.",
+      leadData,
+      journey: journey("horeca", "horeca_business", leadData),
+    };
+  }
+  if (!leadData.horecaVolume) {
+    return {
+      intent: "horeca",
+      text: "Perfecto. Para prepararte una selección y condiciones adecuadas, ¿qué volumen aproximado buscas?",
+      suggestionSlugs: [],
+      replyButtons: HORECA_VOLUME_MENU,
+      footer: "La propuesta se adapta a tu carta, presupuesto y frecuencia de reposición.",
+      leadData,
+      journey: journey("horeca", "horeca_volume", leadData),
+    };
+  }
+  return {
+    intent: "horeca",
+    text: "¡Gracias! 🙌 Ya avisé al equipo comercial para preparar una propuesta. Si deseas, deja aquí el nombre del negocio, distrito y qué estilo de vinos buscas; así la respuesta será más precisa.",
+    suggestionSlugs: [],
+    footer: "Atención comercial personalizada por WhatsApp.",
+    leadData,
+    journey: journey("horeca", "horeca_handoff", leadData),
+    requiresHuman: true,
+  };
 }
 
 function extractEmail(value: string): string | undefined {
@@ -151,6 +244,7 @@ function catalogCollectionReply(
       text: "El catálogo se está actualizando. Puedes revisar todas las etiquetas disponibles en nuestra web.",
       suggestionSlugs: [],
       actionButtons: [{ type: "url", id: "catalog_web", text: "Ver catálogo web", url: "/catalogo" }],
+      journey: journey("catalog", "catalog_browse"),
     };
   }
 
@@ -176,6 +270,7 @@ function catalogCollectionReply(
         }
       : {}),
     footer: "Catálogo WBStraders · Delivery en Lima",
+    journey: journey("catalog", "catalog_browse"),
   };
 }
 
@@ -209,6 +304,7 @@ function catalogReply(normalizedMessage: string): WhatsAppBotReply | undefined {
         },
       ],
       footer: "Puedes volver a escribir MENÚ cuando quieras.",
+      journey: journey("catalog", "catalog_browse"),
     };
   }
   return undefined;
@@ -307,6 +403,7 @@ function recommendationReply(context: string, lead: WhatsAppLeadData): WhatsAppB
       suggestionSlugs: [],
       replyButtons: OCCASION_MENU,
       footer: "También puedes escribir el plato o la ocasión.",
+      journey: journey("wine", "wine_occasion", lead),
     };
   }
 
@@ -362,14 +459,16 @@ function recommendationReply(context: string, lead: WhatsAppLeadData): WhatsAppB
           },
         }
       : {}),
-    footer: "Precio publicado · Delivery en Lima · Responde OFERTAS para recibir beneficios.",
+    footer: "Precio publicado · Delivery en Lima · Para recibir novedades, escribe RECIBIR OFERTAS.",
     leadData: lead,
+    journey: journey("wine", "recommendation_ready", lead),
   };
 }
 
 export function respondToWhatsApp(args: {
   message: string;
   recentInboundMessages?: readonly string[];
+  journey?: WhatsAppJourneyState;
   /** Kept for backwards compatibility. The sales chat no longer asks for an age confirmation. */
   ageVerified?: boolean;
 }): WhatsAppBotReply {
@@ -380,7 +479,18 @@ export function respondToWhatsApp(args: {
     BUTTON_SELECTION_TEXT[normalizedIncomingMessage.replace(/_/g, " ")] ??
     incomingMessage;
   const normalizedMessage = normalize(message);
-  const context = buildContext(message, args.recentInboundMessages ?? []);
+  const exactGreeting = /^(hola|holi|buenas|buenos dias|buenas tardes|buenas noches|menu)$/.test(normalizedMessage);
+  const menuSelection = [
+    "choose wine",
+    "elegir un vino",
+    "see catalog",
+    "ver catalogo",
+    "see promotions",
+    "promociones",
+  ].includes(normalizedIncomingMessage.replace(/_/g, " "));
+  const restartJourney = exactGreeting || menuSelection;
+  const activeJourney = !restartJourney && isWhatsAppJourneyFresh(args.journey) ? args.journey : undefined;
+  const context = buildContext(message, restartJourney ? [] : args.recentInboundMessages ?? []);
   const normalizedContext = normalize(context);
 
   if (/\b(parar|stop|baja|no promociones|cancelar suscripcion)\b/.test(normalizedMessage)) {
@@ -389,14 +499,17 @@ export function respondToWhatsApp(args: {
       text: "Listo ✅ No volveremos a enviarte promociones por WhatsApp. Puedes escribirnos cuando necesites ayuda con un pedido o una recomendación.",
       suggestionSlugs: [],
       withdrawMarketingConsent: true,
+      journey: journey("support", "marketing_opt_in"),
     };
   }
 
   const submittedEmail = extractEmail(incomingMessage);
   const explicitlyAcceptsOffers = /\b(acepto|aceptar|si acepto|deseo recibir)\b/.test(normalizedMessage);
-  const asksForOffers =
-    normalizedMessage === "ofertas" ||
-    /\b(quiero|deseo|enviame|mandame|recibir|suscribirme)\b.*\b(ofertas|novedades|promociones)\b/.test(
+  // “Promociones” is a purchase-intent entry point: show the current published
+  // selections first. Ask for email only when the customer explicitly asks to
+  // receive future communications, never just because they want to see offers.
+  const asksForMarketingUpdates =
+    /\b(recibir|enviame|mandame|suscribirme|suscripcion|avisame|notificarme)\b.*\b(ofertas|novedades|promociones)\b/.test(
       normalizedMessage,
     );
 
@@ -408,16 +521,34 @@ export function respondToWhatsApp(args: {
       suggestionSlugs: [],
       marketingLead: { email: submittedEmail, ...(name ? { name } : {}) },
       footer: "Suscripción opcional · Puedes darte de baja en cualquier momento.",
+      journey: journey("support", "marketing_opt_in"),
     };
   }
 
-  if (asksForOffers || submittedEmail) {
+  if (asksForMarketingUpdates || submittedEmail) {
     return {
       intent: "lead_capture",
       text: "Con gusto. Es opcional y no afecta tu compra. Para autorizar el envío de ofertas, maridajes y novedades por correo, responde en un solo mensaje: *ACEPTO Tu nombre correo@ejemplo.com*.",
       suggestionSlugs: [],
       footer: "Solo usaremos tu correo para comunicaciones de WBStraders. Puedes darte de baja cuando quieras.",
+      journey: journey("support", "marketing_opt_in"),
     };
+  }
+
+  const horecaLead: WhatsAppLeadData = {
+    ...(activeJourney?.qualification ?? {}),
+    customerType: "horeca",
+    horecaBusinessType:
+      detectHorecaBusiness(normalizedMessage) ??
+      detectHorecaBusiness(normalizedContext) ??
+      activeJourney?.qualification?.horecaBusinessType,
+    horecaVolume:
+      detectHorecaVolume(normalizedMessage) ??
+      detectHorecaVolume(normalizedContext) ??
+      activeJourney?.qualification?.horecaVolume,
+  };
+  if (activeJourney?.path === "horeca" || isHorecaIntent(normalizedContext)) {
+    return horecaReply(horecaLead);
   }
 
   if (/\b(humano|persona|asesor|vendedor|hablar con alguien|reclamo|queja)\b/.test(normalizedMessage)) {
@@ -426,6 +557,7 @@ export function respondToWhatsApp(args: {
       text: "Claro 🙋 Ya avisé al equipo de WBStraders para que continúe contigo por este chat. Si deseas, deja aquí el detalle y lo encontrará al responder.",
       suggestionSlugs: [],
       requiresHuman: true,
+      journey: journey("support", "human_handoff"),
     };
   }
 
@@ -435,6 +567,7 @@ export function respondToWhatsApp(args: {
       text: "Gracias 📦 Ya registré tu número de pedido. Un miembro del equipo revisará el estado y continuará contigo por este chat.",
       suggestionSlugs: [],
       requiresHuman: true,
+      journey: journey("support", "order_support"),
     };
   }
 
@@ -444,6 +577,7 @@ export function respondToWhatsApp(args: {
       text: "Te ayudo con tu pedido 📦 Envíame el número de orden que recibiste por correo (por ejemplo, WBS-2026-000001).",
       suggestionSlugs: [],
       footer: "No compartas datos bancarios ni contraseñas.",
+      journey: journey("support", "order_support"),
     };
   }
 
@@ -455,6 +589,7 @@ export function respondToWhatsApp(args: {
         text: "Sí hacemos delivery en Lima 🚚. Dime tu distrito y te indico la tarifa, el tiempo estimado y desde qué monto el envío es gratis.",
         suggestionSlugs: [],
         footer: "La tarifa final se confirma en el checkout.",
+        journey: journey("support", "shipping"),
       };
     }
     return {
@@ -463,49 +598,44 @@ export function respondToWhatsApp(args: {
       suggestionSlugs: [],
       replyButtons: MAIN_MENU,
       footer: "La tarifa final se confirma con la dirección del checkout.",
+      journey: journey("support", "shipping"),
     };
   }
 
-  const exactGreeting = /^(hola|holi|buenas|buenos dias|buenas tardes|buenas noches|menu)$/.test(normalizedMessage);
   if (exactGreeting) {
     return {
       intent: "greeting",
       text: "¡Hola! 👋 Soy el sommelier virtual de *WBStraders*. Te ayudo a elegir vinos argentinos para tu comida, regalo o celebración.\n\n¿Qué te gustaría hacer? Para revisar un pedido, escribe *MI PEDIDO*.",
       suggestionSlugs: [],
       replyButtons: MAIN_MENU,
-      actionButtons: [
-        {
-          type: "url",
-          id: "catalog_pdf",
-          text: "Descargar PDF 📥",
-          url: "/catalogos/fiestas-patrias-2026.pdf",
-        },
-      ],
-      footer: "Atención personalizada por WhatsApp",
+      footer: "Atención personalizada · Catálogo PDF disponible dentro de “Ver catálogo”",
+      journey: journey("wine", "menu"),
     };
   }
 
   const catalog = catalogReply(normalizedMessage);
   if (catalog) return catalog;
 
-  const lead: WhatsAppLeadData = {
+  const detectedLead: WhatsAppLeadData = {
     occasion: detectOccasion(normalizedMessage) ?? detectOccasion(normalizedContext),
     wineStyle: detectWineStyle(normalizedMessage) ?? detectWineStyle(normalizedContext),
     purchaseFormat: detectPurchaseFormat(normalizedMessage) ?? detectPurchaseFormat(normalizedContext),
     budget: detectBudget(normalizedMessage) ?? detectBudget(normalizedContext),
   };
+  const lead = mergeWhatsAppQualification(activeJourney?.qualification, detectedLead) ?? {};
 
-  const wantsPacks = /pack|promo|oferta|ahorro/.test(normalizedContext);
+  const wantsPacks = activeJourney?.path === "promotions" || /pack|promo|oferta|ahorro/.test(normalizedContext);
   const wantsRecommendation = /elegir|recomiend|busco|quiero|vino|botella|sommelier/.test(normalizedContext);
 
   if (wantsPacks && !lead.wineStyle && !lead.occasion) {
     return {
       intent: "qualification",
-      text: "Tenemos packs pensados para ahorrar sin comprar a ciegas 🎁. ¿Qué estilo prefieres?",
+      text: "✨ Tenemos selecciones con mejor precio por botella. ¿Qué estilo te provoca más hoy?",
       suggestionSlugs: [],
       replyButtons: STYLE_MENU,
-      footer: "Puedes pedir tintos, blancos o un surtido.",
+      footer: "Elige tintos, blancos o un surtido; te mostraré opciones reales de la tienda.",
       leadData: lead,
+      journey: journey("promotions", "promotion_style", lead),
     };
   }
 
@@ -517,6 +647,7 @@ export function respondToWhatsApp(args: {
       replyButtons: OCCASION_MENU,
       footer: "También puedes escribir tu plato, gusto o presupuesto.",
       leadData: lead,
+      journey: journey("wine", "wine_occasion", lead),
     };
   }
 
@@ -531,6 +662,7 @@ export function respondToWhatsApp(args: {
       ],
       footer: "Elige una opción o escribe otra ocasión.",
       leadData: lead,
+      journey: journey("wine", "gift_choice", lead),
     };
   }
 
@@ -542,6 +674,7 @@ export function respondToWhatsApp(args: {
       replyButtons: BUDGET_MENU,
       footer: "Te mostraré una opción principal y una alternativa.",
       leadData: lead,
+      journey: journey("wine", "gift_budget", lead),
     };
   }
 
@@ -553,8 +686,12 @@ export function respondToWhatsApp(args: {
       replyButtons: FORMAT_MENU,
       footer: "La selección quedará editable antes de pagar.",
       leadData: lead,
+      journey: journey(wantsPacks ? "promotions" : "wine", wantsPacks ? "promotion_format" : "wine_format", lead),
     };
   }
 
-  return recommendationReply(context, lead);
+  return {
+    ...recommendationReply(context, lead),
+    journey: journey(wantsPacks ? "promotions" : "wine", "recommendation_ready", lead),
+  };
 }

@@ -2,17 +2,19 @@ import { describe, expect, it } from "vitest";
 import { respondToWhatsApp } from "./conversation";
 
 describe("WhatsApp sommelier conversation", () => {
-  it("greets the customer with a useful menu and direct catalog download", () => {
+  it("greets the customer with a compact menu without duplicating the catalog", () => {
     const reply = respondToWhatsApp({ message: "Hola" });
     expect(reply.intent).toBe("greeting");
     expect(reply.text).toContain("sommelier virtual");
     expect(reply.text).not.toContain("18 años");
-    expect(reply.replyButtons).toHaveLength(2);
+    expect(reply.replyButtons).toHaveLength(3);
     expect(reply.replyButtons?.map((button) => button.text)).toContain("Elegir un vino 🍷");
-    expect(reply.actionButtons?.[0]).toMatchObject({
-      id: "catalog_pdf",
-      url: "/catalogos/fiestas-patrias-2026.pdf",
-    });
+    expect(reply.replyButtons?.map((button) => button.text)).toEqual([
+      "Elegir un vino 🍷",
+      "Ver catálogo 📚",
+      "Promociones ✨",
+    ]);
+    expect(reply.actionButtons).toBeUndefined();
   });
 
   it("asks one qualification question before recommending", () => {
@@ -62,6 +64,79 @@ describe("WhatsApp sommelier conversation", () => {
     const reds = respondToWhatsApp({ message: "catalog_reds" });
     expect(reds.suggestionSlugs).toContain("rn40-malbec");
     expect(reds.actionButtons).toHaveLength(3);
+  });
+
+  it("takes the promotions entry point to published pack selections", () => {
+    const reply = respondToWhatsApp({ message: "see_promotions" });
+
+    expect(reply.intent).toBe("qualification");
+    expect(reply.text).toContain("mejor precio por botella");
+    expect(reply.replyButtons?.map((button) => button.id)).toEqual([
+      "style_red",
+      "style_white",
+      "style_mix",
+    ]);
+  });
+
+  it("resumes a fresh recommendation without relying on the entire message history", () => {
+    const reply = respondToWhatsApp({
+      message: "1 botella",
+      journey: {
+        path: "wine",
+        stage: "wine_format",
+        qualification: { occasion: "parrilla y carnes" },
+        updatedAt: new Date().toISOString(),
+      },
+    });
+
+    expect(reply.intent).toBe("recommendation");
+    expect(reply.suggestionSlugs).toContain("rn40-malbec");
+    expect(reply.journey?.stage).toBe("recommendation_ready");
+  });
+
+  it("does not reuse an expired recommendation state", () => {
+    const reply = respondToWhatsApp({
+      message: "1 botella",
+      journey: {
+        path: "wine",
+        stage: "wine_format",
+        qualification: { occasion: "parrilla y carnes" },
+        updatedAt: new Date(Date.now() - 31 * 60 * 1_000).toISOString(),
+      },
+    });
+
+    expect(reply.journey?.stage).toBe("wine_occasion");
+    expect(reply.suggestionSlugs).toEqual([]);
+  });
+
+  it("qualifies HORECA leads before handing them to a person", () => {
+    const volumeQuestion = respondToWhatsApp({ message: "Tengo un restaurante" });
+    expect(volumeQuestion.intent).toBe("horeca");
+    expect(volumeQuestion.journey?.stage).toBe("horeca_volume");
+    expect(volumeQuestion.replyButtons?.map((button) => button.id)).toContain("horeca_13_48");
+
+    const handoff = respondToWhatsApp({
+      message: "13–48 botellas",
+      journey: {
+        path: "horeca",
+        stage: "horeca_volume",
+        qualification: { customerType: "horeca", horecaBusinessType: "restaurant" },
+        updatedAt: new Date().toISOString(),
+      },
+    });
+    expect(handoff.requiresHuman).toBe(true);
+    expect(handoff.leadData).toMatchObject({
+      customerType: "horeca",
+      horecaBusinessType: "restaurant",
+      horecaVolume: "13_48",
+    });
+  });
+
+  it("asks for permission only when a customer asks to receive future promotions", () => {
+    const reply = respondToWhatsApp({ message: "Quiero recibir promociones" });
+
+    expect(reply.intent).toBe("lead_capture");
+    expect(reply.text).toContain("ACEPTO");
   });
 
   it("adds web buttons for the recommended wine and its alternative", () => {
