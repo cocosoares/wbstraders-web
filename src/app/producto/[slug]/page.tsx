@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Award, Grape, MapPin, Mountain } from "lucide-react";
 import { FloatingBottle } from "@/components/floating-bottle";
+import { ProductImageStage } from "@/components/product-image-stage";
 import { ProductCard } from "@/components/product-card";
 import { TierSelector } from "@/components/tier-selector";
 import { PRODUCTS, PRODUCTS_BY_SLUG, groupSiblings } from "@/data/products";
 import { SITE } from "@/data/site";
 import { bestUnitCents } from "@/lib/pricing";
-import { cn, formatPEN, getWineBgGradient } from "@/lib/utils";
+import { formatPEN } from "@/lib/utils";
 import type { Product } from "@/types";
 
 export function generateStaticParams() {
@@ -78,16 +79,18 @@ export default async function ProductPage({
               {product.badge}
             </span>
           )}
-          <div className={cn(
-            "group flex h-[28rem] items-end justify-center rounded-2xl bg-gradient-to-b px-10 pt-12 sm:h-[32rem]",
-            getWineBgGradient(product.type)
-          )}>
-            <FloatingBottle
-              product={product}
-              priority
-              className="h-96 sm:h-[26rem]"
-            />
-          </div>
+          <ProductImageStage
+            product={product}
+            className="group h-[28rem] rounded-2xl px-10 pt-12 sm:h-[32rem]"
+          >
+            <div className="flex h-full items-end justify-center">
+              <FloatingBottle
+                product={product}
+                priority
+                className="h-96 sm:h-[26rem]"
+              />
+            </div>
+          </ProductImageStage>
         </div>
 
         <div>

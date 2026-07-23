@@ -2,6 +2,22 @@ export type WineType = "Tinto" | "Blanco" | "Rosado" | "Espumante";
 
 export type Brand = "Escala Humana" | "Finca Ambrosía" | "Viñas en Flor";
 
+export type ProductVisualTone =
+  | "garnet"
+  | "terracotta"
+  | "plum"
+  | "celadon"
+  | "blush"
+  | "champagne"
+  | "teal"
+  | "slate"
+  | "ochre"
+  | "lavender"
+  | "mineral"
+  | "copper"
+  | "indigo"
+  | "sky";
+
 /**
  * Escala de precio por volumen. `packTotalCents` es el precio exacto del pack
  * de `minQty` botellas (tal como figura en el catálogo oficial).
@@ -36,6 +52,8 @@ export interface Product {
   tiers: PriceTier[];
   /** Foto real opcional (p. ej. /products/rn40-malbec.jpg). Si falta, se usa la ilustración. */
   image?: string;
+  /** Dirección de arte del fondo para mantener contraste con la botella y su etiqueta. */
+  visualTone?: ProductVisualTone;
 }
 
 export interface CartLine {

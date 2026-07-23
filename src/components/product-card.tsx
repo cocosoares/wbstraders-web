@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { BottleArt } from "@/components/bottle-art";
+import { ProductImageStage } from "@/components/product-image-stage";
 import { bestUnitCents } from "@/lib/pricing";
-import { cn, formatPEN, getWineBgGradient } from "@/lib/utils";
+import { cn, formatPEN } from "@/lib/utils";
 import { useCart } from "@/hooks/use-cart";
 import type { Product } from "@/types";
 
@@ -27,23 +28,22 @@ export function ProductCard({
     >
       <Link
         href={`/producto/${product.slug}`}
-        className={cn(
-          "relative block bg-gradient-to-b px-6 pt-8 pb-4",
-          getWineBgGradient(product.type)
-        )}
+        className="block"
         aria-label={`Ver detalle de ${product.name}`}
       >
-        {product.badge && (
-          <span className="absolute top-3 left-3 z-10 rounded-full bg-wine-600 px-3 py-1 text-[11px] font-semibold tracking-wide text-cream-50">
-            {product.badge}
-          </span>
-        )}
-        <div className="mx-auto flex h-52 items-end justify-center px-10 pt-6">
-          <BottleArt
-            product={product}
-            className="h-48 drop-shadow-lg transition-transform duration-300 ease-out group-hover:-translate-y-2 group-hover:scale-[1.04]"
-          />
-        </div>
+        <ProductImageStage product={product} className="h-64 px-6 pt-8 pb-4">
+          {product.badge && (
+            <span className="absolute top-3 left-3 z-20 rounded-full bg-wine-600 px-3 py-1 text-[11px] font-semibold tracking-wide text-cream-50 shadow-sm">
+              {product.badge}
+            </span>
+          )}
+          <div className="mx-auto flex h-full items-end justify-center px-10 pt-6">
+            <BottleArt
+              product={product}
+              className="h-52 drop-shadow-[0_18px_18px_rgba(25,18,14,0.3)] transition-transform duration-300 ease-out group-hover:-translate-y-2 group-hover:scale-[1.04]"
+            />
+          </div>
+        </ProductImageStage>
       </Link>
 
       <div className="flex flex-1 flex-col p-5">

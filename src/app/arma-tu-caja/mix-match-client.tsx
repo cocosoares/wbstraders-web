@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Check, Minus, Plus, ShoppingBag } from "lucide-react";
 import { BottleArt } from "@/components/bottle-art";
+import { ProductImageStage } from "@/components/product-image-stage";
 import { PRODUCTS } from "@/data/products";
 import { lineTotalCents, tierUnitCents } from "@/lib/pricing";
 import { cn, formatPEN } from "@/lib/utils";
@@ -160,9 +161,14 @@ export function MixMatchClient() {
                 key={product.id}
                 className="flex items-center gap-4 rounded-xl border border-cream-300 bg-cream-50 p-4"
               >
-                <div className="flex h-20 w-12 shrink-0 items-end justify-center rounded-md bg-gradient-to-b from-olive-900 to-ink-900">
-                  <BottleArt product={product} className="h-20" />
-                </div>
+                <ProductImageStage
+                  product={product}
+                  className="h-20 w-12 shrink-0 rounded-md"
+                >
+                  <div className="flex h-full items-end justify-center">
+                    <BottleArt product={product} className="h-20" />
+                  </div>
+                </ProductImageStage>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-ink-900">{product.name}</p>
                   <p className="text-xs text-ink-500">

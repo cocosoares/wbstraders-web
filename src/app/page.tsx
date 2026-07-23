@@ -12,6 +12,7 @@ import {
   Utensils,
 } from "lucide-react";
 import { FloatingBottle } from "@/components/floating-bottle";
+import { ProductImageStage } from "@/components/product-image-stage";
 import { ProductCard } from "@/components/product-card";
 import { Reveal } from "@/components/reveal";
 import { AskSommelierButton } from "@/components/sommelier-widget";
@@ -150,15 +151,24 @@ function Hero() {
           </div>
         </Reveal>
         <Reveal delay={0.15} className="hidden md:block">
-          <div className="relative mx-auto flex h-96 max-w-sm items-end justify-center gap-4 rounded-t-full bg-olive-800/60 px-10 pt-10">
+          <div className="relative mx-auto grid h-96 max-w-md grid-cols-3 items-end gap-3 rounded-[2rem] border border-cream-50/10 bg-olive-800/45 p-3 shadow-2xl shadow-ink-900/35">
             {heroBottles.map((product, index) => (
-              <FloatingBottle
+              <ProductImageStage
                 key={product.id}
                 product={product}
-                delay={index * 0.6}
-                priority={index === 1}
-                className={index === 1 ? "h-80" : "h-64"}
-              />
+                className={`group rounded-t-full rounded-b-2xl ${
+                  index === 1 ? "h-[22rem]" : "h-[19rem]"
+                }`}
+              >
+                <div className="flex h-full items-end justify-center px-3 pt-8">
+                  <FloatingBottle
+                    product={product}
+                    delay={index * 0.6}
+                    priority={index === 1}
+                    className={index === 1 ? "h-80" : "h-64"}
+                  />
+                </div>
+              </ProductImageStage>
             ))}
           </div>
         </Reveal>

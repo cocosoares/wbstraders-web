@@ -32,6 +32,7 @@ export const PRODUCTS: Product[] = [
     regularUnitCents: toCents(134.9),
     pricingGroup: "livvera-tintas",
     image: "/products/livvera-tintas.webp",
+    visualTone: "garnet",
     tiers: [
       t(1, 86.64, "Precio oferta"),
       t(3, 231.9, "Pack x3"),
@@ -56,6 +57,7 @@ export const PRODUCTS: Product[] = [
     regularUnitCents: toCents(134.9),
     pricingGroup: "livvera-tintas",
     image: "/products/livvera-tintas.webp",
+    visualTone: "terracotta",
     tiers: [
       t(1, 86.64, "Precio oferta"),
       t(3, 231.9, "Pack x3"),
@@ -81,6 +83,7 @@ export const PRODUCTS: Product[] = [
     regularUnitCents: toCents(134.9),
     pricingGroup: "livvera-mix",
     image: "/products/livvera-mix.webp",
+    visualTone: "plum",
     tiers: [
       t(1, 86.9, "Precio oferta"),
       t(3, 231.9, "Pack x3"),
@@ -104,6 +107,7 @@ export const PRODUCTS: Product[] = [
     regularUnitCents: toCents(134.9),
     pricingGroup: "livvera-mix",
     image: "/products/livvera-mix.webp",
+    visualTone: "celadon",
     tiers: [
       t(1, 86.9, "Precio oferta"),
       t(3, 231.9, "Pack x3"),
@@ -127,6 +131,7 @@ export const PRODUCTS: Product[] = [
     regularUnitCents: toCents(134.9),
     pricingGroup: "livvera-mix",
     image: "/products/livvera-mix.webp",
+    visualTone: "blush",
     tiers: [
       t(1, 86.9, "Precio oferta"),
       t(3, 231.9, "Pack x3"),
@@ -154,6 +159,7 @@ export const PRODUCTS: Product[] = [
     regularUnitCents: toCents(114.9),
     pricingGroup: "ambrosia-brut",
     image: "/products/finca-ambrosia-brut-nature.webp",
+    visualTone: "champagne",
     tiers: [
       t(1, 114.9),
       t(2, 147.9, "Precio oferta x2"),
@@ -177,6 +183,7 @@ export const PRODUCTS: Product[] = [
     regularUnitCents: toCents(69.9),
     pricingGroup: "ambrosia-casa",
     image: "/products/casa-sauvignon-blanc.webp",
+    visualTone: "teal",
     tiers: [
       t(1, 69.9),
       t(2, 89.9, "Precio oferta x2"),
@@ -202,6 +209,7 @@ export const PRODUCTS: Product[] = [
     regularUnitCents: toCents(69.9),
     pricingGroup: "ambrosia-casa",
     image: "/products/casa-malbec.webp",
+    visualTone: "slate",
     tiers: [
       t(1, 69.9),
       t(2, 89.9, "Precio oferta x2"),
@@ -229,6 +237,7 @@ export const PRODUCTS: Product[] = [
     regularUnitCents: toCents(208.9),
     pricingGroup: "geografia",
     image: "/products/geografia-extraordinaria-blancas-de-uco.webp",
+    visualTone: "ochre",
     tiers: [
       t(1, 134.9, "Precio oferta"),
       t(2, 240.9, "Pack x2"),
@@ -254,6 +263,7 @@ export const PRODUCTS: Product[] = [
     regularUnitCents: toCents(208.9),
     pricingGroup: "geografia",
     image: "/products/geografia-extraordinaria-tintas-de-uco.webp",
+    visualTone: "lavender",
     tiers: [
       t(1, 134.9, "Precio oferta"),
       t(2, 240.9, "Pack x2"),
@@ -281,6 +291,7 @@ export const PRODUCTS: Product[] = [
     regularUnitCents: toCents(98.9),
     pricingGroup: "1700-torrontes",
     image: "/products/1700-msnm-torrontes.webp",
+    visualTone: "mineral",
     tiers: [
       t(1, 98.9),
       t(2, 131.9, "Precio oferta x2"),
@@ -307,6 +318,7 @@ export const PRODUCTS: Product[] = [
     regularUnitCents: toCents(98.9),
     pricingGroup: "1700-tintas",
     image: "/products/1700-msnm-malbec.webp",
+    visualTone: "copper",
     tiers: [
       t(1, 98.9),
       t(2, 131.9, "Precio oferta x2"),
@@ -333,6 +345,7 @@ export const PRODUCTS: Product[] = [
     regularUnitCents: toCents(98.9),
     pricingGroup: "1700-tintas",
     image: "/products/1700-msnm-cabernet-sauvignon.webp",
+    visualTone: "indigo",
     tiers: [
       t(1, 98.9),
       t(2, 131.9, "Precio oferta x2"),
@@ -360,6 +373,7 @@ export const PRODUCTS: Product[] = [
     regularUnitCents: toCents(83.9),
     pricingGroup: "rn40",
     image: "/products/rn40-malbec.webp",
+    visualTone: "sky",
     tiers: [
       t(1, 83.9),
       t(2, 111.9, "Precio oferta x2"),

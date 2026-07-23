@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Plus, Send, Sparkles, Wine, X } from "lucide-react";
 import { create } from "zustand";
 import { BottleArt } from "@/components/bottle-art";
+import { ProductImageStage } from "@/components/product-image-stage";
 import { PRODUCTS_BY_SLUG } from "@/data/products";
 import { formatPEN } from "@/lib/utils";
 import { useCart } from "@/hooks/use-cart";
@@ -62,9 +63,14 @@ function SuggestionCard({ slug }: { slug: string }) {
 
   return (
     <div className="flex items-center gap-2.5 rounded-xl border border-cream-300 bg-cream-50 p-2">
-      <div className="flex h-12 w-8 shrink-0 items-end justify-center rounded-md bg-gradient-to-b from-olive-900 to-ink-900">
-        <BottleArt product={product} className="h-12" />
-      </div>
+      <ProductImageStage
+        product={product}
+        className="h-12 w-8 shrink-0 rounded-md"
+      >
+        <div className="flex h-full items-end justify-center">
+          <BottleArt product={product} className="h-12" />
+        </div>
+      </ProductImageStage>
       <div className="min-w-0 flex-1">
         <Link
           href={`/producto/${product.slug}`}
