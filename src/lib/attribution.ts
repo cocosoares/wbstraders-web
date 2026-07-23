@@ -32,6 +32,43 @@ function safeReferrer(value: string | undefined, siteOrigin?: string): string | 
   }
 }
 
+function sanitizeTouch(value: unknown, siteOrigin?: string): AttributionTouch | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+
+  const candidate = value as Record<string, unknown>;
+  const touch: AttributionTouch = {};
+  for (const key of CAMPAIGN_KEYS) {
+    const normalized = typeof candidate[key] === "string" ? limited(candidate[key]) : undefined;
+    if (normalized) touch[key] = normalized;
+  }
+
+  const referrer = typeof candidate.referrer === "string"
+    ? safeReferrer(candidate.referrer, siteOrigin)
+    : undefined;
+  if (referrer) touch.referrer = referrer;
+
+  return Object.keys(touch).length ? touch : undefined;
+}
+
+export function sanitizeStoredAttribution(
+  value: unknown,
+  siteOrigin?: string,
+): OrderAttribution | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+
+  const candidate = value as Record<string, unknown>;
+  const current = sanitizeTouch(candidate, siteOrigin);
+  const first = sanitizeTouch(candidate.first, siteOrigin);
+  const last = sanitizeTouch(candidate.last, siteOrigin);
+  if (!current && !first && !last) return undefined;
+
+  return {
+    ...current,
+    ...(first ? { first } : {}),
+    ...(last ? { last } : {}),
+  };
+}
+
 export function captureAttributionTouch(
   pageUrl: string,
   referrer?: string,
@@ -68,7 +105,10 @@ export function captureBrowserAttribution(): OrderAttribution | undefined {
   if (typeof window === "undefined") return undefined;
   let existing: OrderAttribution | undefined;
   try {
-    existing = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "null") as OrderAttribution | undefined;
+    existing = sanitizeStoredAttribution(
+      JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "null"),
+      window.location.origin,
+    );
   } catch {
     existing = undefined;
   }

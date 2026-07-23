@@ -243,7 +243,7 @@ export function CheckoutClient({
       });
 
       const data = (await response.json()) as {
-        error?: string | { message?: string; details?: Array<{ message?: string }> };
+        error?: string | { message?: string; details?: Array<{ message?: string; path?: Array<string | number> }> };
         orderId?: string;
         orderNumber?: string;
         accessToken?: string;
@@ -251,10 +251,16 @@ export function CheckoutClient({
         testCheckout?: boolean;
       };
       if (!response.ok || !data.orderId || !data.accessToken) {
+        const details = typeof data.error === "string" ? [] : data.error?.details ?? [];
+        const detailedMessage = details.find((detail) => detail.message && detail.message !== "Invalid input")?.message;
+        const firstInvalidPath = details.find((detail) => detail.path?.length)?.path?.join(".");
         const apiMessage =
           typeof data.error === "string"
             ? data.error
-            : data.error?.message || data.error?.details?.find((detail) => detail.message)?.message;
+            : detailedMessage ||
+              (data.error?.message === "Invalid input" && firstInvalidPath
+                ? `El dato ${firstInvalidPath} no tiene un formato válido.`
+                : data.error?.message);
         throw new Error(apiMessage || "No se pudo crear el pedido.");
       }
 

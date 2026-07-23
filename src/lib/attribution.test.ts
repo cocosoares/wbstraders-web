@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { captureAttributionTouch, mergeAttribution } from "@/lib/attribution";
+import { captureAttributionTouch, mergeAttribution, sanitizeStoredAttribution } from "@/lib/attribution";
 
 describe("order attribution", () => {
   it("captures UTMs and removes referrer query data", () => {
@@ -24,6 +24,21 @@ describe("order attribution", () => {
       medium: "social",
       first,
       last: { source: "instagram", medium: "social" },
+    });
+  });
+
+  it("discards malformed legacy browser storage before checkout", () => {
+    expect(sanitizeStoredAttribution({ source: 123, referrer: "javascript:alert(1)", legacy: true })).toBeUndefined();
+    expect(
+      sanitizeStoredAttribution({
+        source: "instagram",
+        unknown: "ignored",
+        first: { medium: "paid_social" },
+        last: "not-an-object",
+      }, "https://wbstraders.pe"),
+    ).toEqual({
+      source: "instagram",
+      first: { medium: "paid_social" },
     });
   });
 });
