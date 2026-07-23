@@ -1,6 +1,5 @@
--- Completes an explicitly authorized internal test checkout without contacting
--- a payment provider. It is intentionally restricted to service_role and
--- orders created with the test-coupon attribution.
+-- Fixes ambiguous references between the function's TABLE output column
+-- `order_id` and columns with the same name in commerce tables.
 
 begin;
 
@@ -50,14 +49,14 @@ begin
 
   select pa.* into v_attempt
   from public.payment_attempts pa
-  where pa.id = p_payment_attempt_id and pa.order_id = p_order_id
+  where pa.id = p_payment_attempt_id
+    and pa.order_id = p_order_id
   for update;
 
   if not found or v_attempt.provider <> 'manual' then
     raise exception using errcode = '22023', message = 'test_payment_attempt_invalid';
   end if;
 
-  -- Validate all items before writing any sale ledger rows.
   for v_item in
     select distinct oi.product_id
     from public.order_items oi
@@ -99,26 +98,28 @@ begin
 
   update public.payment_attempts pa
   set status = 'approved',
-      provider_reference = coalesce(provider_reference, 'test_coupon:' || p_order_id::text),
+      provider_reference = coalesce(pa.provider_reference, 'test_coupon:' || p_order_id::text),
       provider_status_detail = 'approved_simulated_test_coupon',
       response_snapshot = jsonb_build_object(
         'mode', 'sandbox',
         'simulated', true,
         'legalPayment', false,
         'confirmedAt', now()
-      )
+      ),
+      error_code = null
   where pa.id = v_attempt.id;
 
   update public.orders o
   set status = 'paid',
       payment_status = 'approved',
       fulfillment_status = 'reserved',
-      paid_at = coalesce(paid_at, now())
+      paid_at = coalesce(o.paid_at, now())
   where o.id = p_order_id;
 
   update public.stock_reservations sr
   set status = 'converted'
-  where sr.order_id = p_order_id and sr.status = 'active';
+  where sr.order_id = p_order_id
+    and sr.status = 'active';
 
   for v_item in
     select oi.product_id, oi.quantity
