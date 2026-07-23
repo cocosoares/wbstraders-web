@@ -97,7 +97,9 @@ export const createOrderSchema = z.object({
       first: attributionTouchSchema.optional(),
       last: attributionTouchSchema.optional(),
     })
-    .strict()
+    // Attribution is collected from browser storage. Older visits can retain
+    // harmless keys that are no longer part of the current model; discard
+    // those keys instead of preventing a legitimate purchase.
     .optional(),
 });
 

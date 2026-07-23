@@ -243,7 +243,7 @@ export function CheckoutClient({
       });
 
       const data = (await response.json()) as {
-        error?: string | { message?: string };
+        error?: string | { message?: string; details?: Array<{ message?: string }> };
         orderId?: string;
         orderNumber?: string;
         accessToken?: string;
@@ -252,7 +252,9 @@ export function CheckoutClient({
       };
       if (!response.ok || !data.orderId || !data.accessToken) {
         const apiMessage =
-          typeof data.error === "string" ? data.error : data.error?.message;
+          typeof data.error === "string"
+            ? data.error
+            : data.error?.message || data.error?.details?.find((detail) => detail.message)?.message;
         throw new Error(apiMessage || "No se pudo crear el pedido.");
       }
 

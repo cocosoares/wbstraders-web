@@ -29,6 +29,11 @@ function jsonError(status: number, code: string, message: string, details?: unkn
   return NextResponse.json({ error: { code, message, details } }, { status });
 }
 
+function validationMessage(error: ZodError) {
+  const firstIssue = error.issues[0];
+  return firstIssue?.message || "Revisa los datos del pedido";
+}
+
 export async function POST(request: Request) {
   const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const clientKey = forwardedFor || request.headers.get("x-real-ip")?.trim() || "unknown";
@@ -193,7 +198,7 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     if (error instanceof ZodError) {
-      return jsonError(422, "VALIDATION_ERROR", "Revisa los datos del pedido", error.issues);
+      return jsonError(422, "VALIDATION_ERROR", validationMessage(error), error.issues);
     }
     if (error instanceof OrderPricingError) {
       const status = error.code === "UNKNOWN_PRODUCT" ? 400 : 422;
