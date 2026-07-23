@@ -31,7 +31,7 @@ export const PRODUCTS: Product[] = [
     badge: "Más vendido",
     regularUnitCents: toCents(134.9),
     pricingGroup: "livvera-tintas",
-    image: "/products/livvera-tintas.webp",
+    image: "/products/livvera-malbec.webp",
     visualTone: "garnet",
     tiers: [
       t(1, 86.64, "Precio oferta"),
@@ -56,7 +56,7 @@ export const PRODUCTS: Product[] = [
     pairings: ["Asado de tira", "Anticuchos", "Carnes rojas"],
     regularUnitCents: toCents(134.9),
     pricingGroup: "livvera-tintas",
-    image: "/products/livvera-tintas.webp",
+    image: "/products/livvera-cabernet-sauvignon.webp",
     visualTone: "terracotta",
     tiers: [
       t(1, 86.64, "Precio oferta"),
@@ -82,7 +82,7 @@ export const PRODUCTS: Product[] = [
     pairings: ["Pizza", "Pastas en salsa roja", "Piqueos criollos"],
     regularUnitCents: toCents(134.9),
     pricingGroup: "livvera-mix",
-    image: "/products/livvera-mix.webp",
+    image: "/products/livvera-bonarda.webp",
     visualTone: "plum",
     tiers: [
       t(1, 86.9, "Precio oferta"),
@@ -106,7 +106,7 @@ export const PRODUCTS: Product[] = [
     pairings: ["Tiradito", "Causa limeña", "Comida nikkei"],
     regularUnitCents: toCents(134.9),
     pricingGroup: "livvera-mix",
-    image: "/products/livvera-mix.webp",
+    image: "/products/livvera-malvasia.webp",
     visualTone: "celadon",
     tiers: [
       t(1, 86.9, "Precio oferta"),
@@ -130,7 +130,7 @@ export const PRODUCTS: Product[] = [
     pairings: ["Piqueos", "Poke y nikkei", "Tarde de terraza"],
     regularUnitCents: toCents(134.9),
     pricingGroup: "livvera-mix",
-    image: "/products/livvera-mix.webp",
+    image: "/products/livvera-sangiovese-rose.webp",
     visualTone: "blush",
     tiers: [
       t(1, 86.9, "Precio oferta"),
