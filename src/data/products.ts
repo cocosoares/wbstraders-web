@@ -290,7 +290,7 @@ export const PRODUCTS: Product[] = [
     badge: "Ideal con ceviche",
     regularUnitCents: toCents(98.9),
     pricingGroup: "1700-torrontes",
-    image: "/products/1700-msnm-torrontes.webp",
+    image: "/products/1700-msnm-torrontes-cutout.webp",
     visualTone: "mineral",
     tiers: [
       t(1, 98.9),
@@ -317,7 +317,7 @@ export const PRODUCTS: Product[] = [
     pairings: ["Lomo al jugo", "Costillas BBQ", "Risotto de hongos"],
     regularUnitCents: toCents(98.9),
     pricingGroup: "1700-tintas",
-    image: "/products/1700-msnm-malbec.webp",
+    image: "/products/1700-msnm-malbec-cutout.webp",
     visualTone: "copper",
     tiers: [
       t(1, 98.9),
@@ -344,7 +344,7 @@ export const PRODUCTS: Product[] = [
     pairings: ["Bife angosto", "Estofados", "Quesos intensos"],
     regularUnitCents: toCents(98.9),
     pricingGroup: "1700-tintas",
-    image: "/products/1700-msnm-cabernet-sauvignon.webp",
+    image: "/products/1700-msnm-cabernet-sauvignon-cutout.webp",
     visualTone: "indigo",
     tiers: [
       t(1, 98.9),
@@ -372,7 +372,7 @@ export const PRODUCTS: Product[] = [
     badge: "Ícono de la casa",
     regularUnitCents: toCents(83.9),
     pricingGroup: "rn40",
-    image: "/products/rn40-malbec.webp",
+    image: "/products/rn40-malbec-cutout.webp",
     visualTone: "sky",
     tiers: [
       t(1, 83.9),

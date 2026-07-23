@@ -165,7 +165,7 @@ describe("WhatsApp sommelier conversation", () => {
     expect(reply.intent).toBe("recommendation");
     expect(reply.suggestionSlugs).toContain("1700-msnm-torrontes");
     expect(reply.checkoutItems).toEqual([{ productId: "1700-torrontes", quantity: 2 }]);
-    expect(reply.productImage?.path).toBe("/products/1700-msnm-torrontes.webp");
+    expect(reply.productImage?.path).toBe("/products/1700-msnm-torrontes-cutout.webp");
     expect(reply.text).toContain("1700 msnm Torrontés");
     expect(reply.text).toContain("S/");
   });

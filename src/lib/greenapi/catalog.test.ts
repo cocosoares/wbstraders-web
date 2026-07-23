@@ -23,7 +23,7 @@ describe("Green API catalog synchronization", () => {
       currency: "PEN",
       countryCode: "AR",
       isHidden: true,
-      imageUrl: "https://wbstraders.example/products/rn40-malbec.webp",
+      imageUrl: "https://wbstraders.example/products/rn40-malbec-cutout.webp",
       url: "https://wbstraders.example/producto/rn40-malbec",
     });
   });
