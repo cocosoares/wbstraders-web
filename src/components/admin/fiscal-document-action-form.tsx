@@ -4,6 +4,7 @@ import { useActionState, useId, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import {
   type AdminActionState,
+  issueSandboxFiscalDocument,
   updateFiscalDocumentStatus,
 } from "@/app/admin/(protected)/actions";
 
@@ -14,16 +15,22 @@ export function FiscalDocumentActionForm({
   status,
   documentType,
   provider,
+  sandboxEnabled,
 }: {
   fiscalDocumentId: string;
   status: string;
   documentType: string;
   provider: string;
+  sandboxEnabled: boolean;
 }) {
   const id = useId();
   const [nextStatus, setNextStatus] = useState("issued");
   const [state, formAction, pending] = useActionState(
     updateFiscalDocumentStatus,
+    INITIAL_STATE,
+  );
+  const [sandboxState, sandboxAction, sandboxPending] = useActionState(
+    issueSandboxFiscalDocument,
     INITIAL_STATE,
   );
   const supported =
@@ -48,7 +55,46 @@ export function FiscalDocumentActionForm({
   const selectedStatus = status === "issued" ? "cancelled" : nextStatus;
 
   return (
-    <details className="min-w-64 rounded-lg border border-cream-300 bg-cream-100">
+    <div className="min-w-64 space-y-3">
+      {sandboxEnabled && status === "pending" && ["boleta", "factura"].includes(documentType) && (
+        <details className="rounded-lg border border-gold-500/40 bg-gold-500/10">
+          <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-bold text-ink-900">
+            Emitir prueba fiscal
+          </summary>
+          <form action={sandboxAction} className="space-y-3 border-t border-gold-500/30 p-3">
+            <input type="hidden" name="fiscalDocumentId" value={fiscalDocumentId} />
+            <p className="text-xs leading-5 text-ink-700">
+              Solo funciona con pedidos internos creados usando el cupÃ³n de prueba y pago conciliado.
+              Genera un documento marcado como <strong>sin validez ante SUNAT</strong>.
+            </p>
+            <label htmlFor={`${id}-sandbox`} className="text-xs font-bold text-ink-700">
+              Escribe PRUEBA para confirmar
+            </label>
+            <input
+              id={`${id}-sandbox`}
+              name="confirmation"
+              required
+              maxLength={6}
+              disabled={sandboxPending}
+              className="mt-1 min-h-11 w-full rounded-lg border border-gold-500/40 bg-white px-3 text-base uppercase text-ink-900 disabled:cursor-not-allowed disabled:opacity-60"
+            />
+            <button
+              type="submit"
+              disabled={sandboxPending}
+              className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-ink-900 px-3 py-2 text-sm font-bold text-cream-50 transition-colors hover:bg-ink-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {sandboxPending && <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />}
+              {sandboxPending ? "Emitiendoâ€¦" : "Emitir comprobante de prueba"}
+            </button>
+            {sandboxState.message && (
+              <p className={sandboxState.status === "success" ? "text-xs leading-5 text-olive-700" : "text-xs leading-5 text-wine-700"}>
+                {sandboxState.message}
+              </p>
+            )}
+          </form>
+        </details>
+      )}
+      <details className="rounded-lg border border-cream-300 bg-cream-100">
       <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-bold text-olive-800">
         {status === "issued" ? "Registrar anulación" : "Registrar resultado"}
       </summary>
@@ -194,6 +240,7 @@ export function FiscalDocumentActionForm({
           </p>
         )}
       </form>
-    </details>
+      </details>
+    </div>
   );
 }

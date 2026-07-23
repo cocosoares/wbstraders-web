@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { calculateOrder, OrderPricingError } from "@/lib/orders/pricing";
+import { boletaRequiresDni } from "@/lib/fiscal/tax";
 import { databaseOrderError } from "@/lib/orders/errors";
 import {
   createOrderRecord,
@@ -77,6 +78,17 @@ export async function POST(request: Request) {
         }
       : input;
     const calculated = calculateOrder(orderInput.items, orderInput.delivery.district);
+    if (
+      orderInput.fiscal.receiptType === "boleta" &&
+      boletaRequiresDni(calculated.totalCents) &&
+      !/^\d{8}$/.test(orderInput.fiscal.documentNumber ?? "")
+    ) {
+      return jsonError(
+        422,
+        "BOLETA_DNI_REQUIRED",
+        "Para boletas superiores a S/ 700 debes ingresar un DNI vÃ¡lido.",
+      );
+    }
     const db = getSupabaseAdmin();
     const accessToken = createPublicOrderToken();
     const orderId = randomUUID();

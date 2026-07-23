@@ -10,6 +10,7 @@ import { toCartLines, useCart } from "@/hooks/use-cart";
 import { trackEvent } from "@/lib/analytics";
 import { captureBrowserAttribution } from "@/lib/attribution";
 import { decodeWhatsAppCart } from "@/lib/whatsapp/cart-link";
+import { boletaRequiresDni } from "@/lib/fiscal/tax";
 
 type ReceiptType = "boleta" | "factura";
 type PaymentMethod = "mercadopago" | "manual";
@@ -54,7 +55,7 @@ const INITIAL_FORM: FormState = {
 
 type FieldErrors = Partial<Record<keyof FormState | "form", string>>;
 
-function validate(form: FormState): FieldErrors {
+function validate(form: FormState, totalCents: number | null): FieldErrors {
   const errors: FieldErrors = {};
   if (form.name.trim().length < 3) errors.name = "Ingresa tu nombre completo.";
   if (!/^9\d{8}$/.test(form.phone.trim())) {
@@ -77,6 +78,8 @@ function validate(form: FormState): FieldErrors {
     if (form.fiscalAddress.trim().length < 5) {
       errors.fiscalAddress = "Ingresa el domicilio fiscal.";
     }
+  } else if (totalCents !== null && boletaRequiresDni(totalCents) && !/^\d{8}$/.test(form.documentNumber.trim())) {
+    errors.documentNumber = "Para boletas superiores a S/ 700 debes ingresar tu DNI de 8 dÃ­gitos.";
   } else if (form.documentNumber && !/^\d{8}$/.test(form.documentNumber.trim())) {
     errors.documentNumber = "El DNI debe tener 8 dígitos.";
   }
@@ -196,7 +199,7 @@ export function CheckoutClient({
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    const validation = validate(form);
+    const validation = validate(form, totalCents);
     if (lines.length === 0) validation.form = "Tu carrito está vacío.";
     setErrors(validation);
     if (Object.keys(validation).length > 0) {
@@ -366,7 +369,7 @@ export function CheckoutClient({
           </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="documentNumber" className="mb-1.5 block text-sm font-semibold">{form.receiptType === "factura" ? "RUC *" : "DNI (opcional)"}</label>
+              <label htmlFor="documentNumber" className="mb-1.5 block text-sm font-semibold">{form.receiptType === "factura" ? "RUC *" : totalCents !== null && boletaRequiresDni(totalCents) ? "DNI *" : "DNI (opcional)"}</label>
               <input id="documentNumber" inputMode="numeric" value={form.documentNumber} onChange={(e) => setField("documentNumber", e.target.value.replace(/\D/g, "").slice(0, form.receiptType === "factura" ? 11 : 8))} className={inputClass} aria-invalid={!!errors.documentNumber} aria-describedby={errors.documentNumber ? "documentNumber-error" : undefined} />
               {fieldError("documentNumber", errors)}
             </div>

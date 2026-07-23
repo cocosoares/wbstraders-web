@@ -185,6 +185,19 @@ function customerOrderEmail(kind: EmailJobKind, order: OrderEmailContext): Rende
     case "fiscal.issued.customer": {
       const fiscal = order.fiscalDocument;
       const reference = [fiscal?.series, fiscal?.number].filter(Boolean).join("-");
+      if (fiscal?.testMode) {
+        return {
+          subject: `Comprobante de prueba — ${order.orderNumber}`,
+          html: layout({
+            ...base,
+            eyebrow: "Prueba fiscal",
+            title: "Comprobante de prueba generado",
+            bodyHtml: `<p>Generamos un comprobante de prueba${reference ? ` <strong>${escapeHtml(reference)}</strong>` : ""} para el pedido <strong>${escapeHtml(order.orderNumber)}</strong>.</p><p><strong>Este documento no tiene validez tributaria y no fue enviado a SUNAT.</strong></p>`,
+            footer: "Mensaje de prueba operativa. No reemplaza una boleta o factura electrónica.",
+          }),
+          text: `Generamos el comprobante de prueba ${reference || "sin numeración"} para el pedido ${order.orderNumber}. No tiene validez tributaria ni fue enviado a SUNAT.`,
+        };
+      }
       return {
         subject: `Comprobante emitido — ${order.orderNumber}`,
         html: layout({

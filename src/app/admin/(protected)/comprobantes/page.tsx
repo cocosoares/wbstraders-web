@@ -5,9 +5,11 @@ import { loadFiscalDocuments } from "@/components/admin/admin-data";
 import { FiscalDocumentActionForm } from "@/components/admin/fiscal-document-action-form";
 import { formatAdminDate } from "@/components/admin/format";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { isFiscalSandboxUiEnabled } from "@/lib/fiscal/runtime";
 
 export default async function AdminFiscalDocumentsPage() {
   const result = await loadFiscalDocuments();
+  const sandboxEnabled = isFiscalSandboxUiEnabled();
   const rows: AdminTableRow[] =
     result.state === "ready"
       ? result.data.map((document) => ({
@@ -29,6 +31,11 @@ export default async function AdminFiscalDocumentsPage() {
                   <p className="mt-1 text-xs uppercase tracking-wide text-ink-500">
                     {formatProvider(document.provider)}
                   </p>
+                  {document.testMode && (
+                    <p className="mt-1 text-xs font-bold uppercase tracking-wide text-wine-700">
+                      Sin validez SUNAT
+                    </p>
+                  )}
                 </div>
               ),
             },
@@ -107,6 +114,7 @@ export default async function AdminFiscalDocumentsPage() {
                   status={document.status}
                   documentType={document.documentType}
                   provider={document.provider}
+                  sandboxEnabled={sandboxEnabled}
                 />
               ),
             },
@@ -118,14 +126,15 @@ export default async function AdminFiscalDocumentsPage() {
     <div className="space-y-6">
       <header>
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-olive-700">
-          Operación fiscal manual
+          {sandboxEnabled ? "Operación fiscal de prueba" : "Operación fiscal manual"}
         </p>
         <h1 className="mt-2 font-display text-3xl font-semibold text-ink-900 sm:text-4xl">
           Comprobantes
         </h1>
         <p className="mt-2 max-w-3xl text-base leading-7 text-ink-700">
-          Registra el resultado obtenido en SEE-SOL o en el back office fiscal.
-          WBStraders no emite, firma ni anula comprobantes ante SUNAT desde esta pantalla.
+          {sandboxEnabled
+            ? "El modo de prueba solo admite pedidos internos con cupón y pago conciliado. Cada documento queda marcado sin validez tributaria y no se envía a SUNAT."
+            : "Registra el resultado obtenido en SEE-SOL o en el back office fiscal. WBStraders no emite, firma ni anula comprobantes ante SUNAT desde esta pantalla."}
         </p>
       </header>
 
@@ -180,6 +189,7 @@ function formatProvider(provider: string) {
     manual: "Registro manual",
     sunat_sol: "SEE-SOL",
     pse: "PSE",
+    sandbox: "Prueba sin validez",
   };
   return labels[provider] || provider;
 }

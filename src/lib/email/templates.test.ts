@@ -53,4 +53,13 @@ describe("Resend email templates", () => {
     expect(email.html).not.toContain(claim.detail);
     expect(email.text).toContain("Conserva este número");
   });
+  it("labels sandbox fiscal messages as non-tax-valid documents", () => {
+    const email = renderOrderEmail("fiscal.issued.customer", {
+      ...order,
+      fiscalDocument: { documentType: "boleta", series: "TEST-B", number: "00000001", testMode: true },
+    });
+    expect(email.subject).toContain("prueba");
+    expect(email.html).toContain("no tiene validez tributaria");
+    expect(email.html).toContain("SUNAT");
+  });
 });

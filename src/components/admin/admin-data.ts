@@ -86,6 +86,7 @@ export type AdminFiscalDocument = {
   orderNumber: string;
   documentType: string;
   provider: string;
+  testMode: boolean;
   recipientName: string;
   recipientDocumentType: string | null;
   recipientDocumentNumber: string | null;
@@ -241,6 +242,7 @@ type FiscalDocumentRow = {
   order_id: string;
   document_type: string;
   provider: string;
+  test_mode?: boolean;
   recipient_snapshot: unknown;
   status: string;
   series: string | null;
@@ -572,16 +574,25 @@ export async function loadFiscalDocuments(): Promise<
 
   try {
     const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase
-      .from("fiscal_documents")
-      .select(
-        "id,order_id,document_type,provider,recipient_snapshot,status,series,number,provider_reference,cancellation_reference,cancellation_reason,error_message,issued_at,created_at",
-      )
-      .order("created_at", { ascending: false })
-      .limit(100);
-    if (error) throw error;
+      const fiscalDocumentSelect =
+        "id,order_id,document_type,provider,recipient_snapshot,status,series,number,provider_reference,cancellation_reference,cancellation_reason,error_message,issued_at,created_at";
+      const fiscalResultWithSandbox = await supabase
+        .from("fiscal_documents")
+        .select(`${fiscalDocumentSelect},test_mode`)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      const fiscalResult =
+        fiscalResultWithSandbox.error?.code === "42703" &&
+        fiscalResultWithSandbox.error.message.includes("test_mode")
+          ? await supabase
+              .from("fiscal_documents")
+              .select(fiscalDocumentSelect)
+              .order("created_at", { ascending: false })
+              .limit(100)
+          : fiscalResultWithSandbox;
+      if (fiscalResult.error) throw fiscalResult.error;
 
-    const documents = (data || []) as FiscalDocumentRow[];
+      const documents = (fiscalResult.data || []) as FiscalDocumentRow[];
     const orderIds = [...new Set(documents.map((document) => document.order_id))];
     const ordersById = new Map<string, FiscalOrderRow>();
 
@@ -615,6 +626,7 @@ export async function loadFiscalDocuments(): Promise<
           orderNumber: order?.order_number || "Pedido no disponible",
           documentType: document.document_type,
           provider: document.provider,
+          testMode: Boolean(document.test_mode),
           recipientName:
             businessName ||
             readString(customer, "name") ||

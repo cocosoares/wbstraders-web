@@ -99,6 +99,10 @@ El checkout crea una boleta o factura pendiente. `/admin/comprobantes` es una co
 manual auditada para registrar el resultado real de SEE-SOL/PSE; no emite ni simula
 un comprobante ante SUNAT por sí misma.
 
+Existe además un sandbox fiscal estrictamente limitado a pedidos internos con cupón
+de prueba. Sus comprobantes se identifican como “sin validez tributaria”; la guía de
+uso y activación real está en [Facturación electrónica Perú](docs/fiscalizacion-peru.md).
+
 ## Despacho de WhatsApp
 
 Los pagos aprobados crean una fila única en `notification_outbox`. Un cron debe

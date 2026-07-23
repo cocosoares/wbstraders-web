@@ -84,20 +84,40 @@ export async function getOrderEmailContext(
     .order("created_at", { ascending: true });
   if (itemsResult.error) throw itemsResult.error;
 
-  const fiscalResult = await db
+  const fiscalDocumentSelect = "document_type,series,number,pdf_path,status";
+  const fiscalResultWithSandbox = await db
     .from("fiscal_documents")
-    .select("document_type,series,number,pdf_path,status")
+    .select(`${fiscalDocumentSelect},test_mode`)
     .eq("order_id", orderId)
     .eq("status", "issued")
     .order("issued_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+  const fiscalResult =
+    fiscalResultWithSandbox.error?.code === "42703" &&
+    fiscalResultWithSandbox.error.message.includes("test_mode")
+      ? await db
+          .from("fiscal_documents")
+          .select(fiscalDocumentSelect)
+          .eq("order_id", orderId)
+          .eq("status", "issued")
+          .order("issued_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : fiscalResultWithSandbox;
   if (fiscalResult.error) throw fiscalResult.error;
 
+  const fiscalDocument = fiscalResult.data as {
+    document_type: unknown;
+    series: unknown;
+    number: unknown;
+    pdf_path: unknown;
+    test_mode?: unknown;
+  } | null;
   const customer = objectValue(orderResult.data.customer_snapshot);
   const delivery = objectValue(orderResult.data.delivery_snapshot);
   const fiscal = objectValue(orderResult.data.fiscal_snapshot);
-  const pdfPath = stringValue(fiscalResult.data?.pdf_path);
+  const pdfPath = stringValue(fiscalDocument?.pdf_path);
 
   return {
     orderId: stringValue(orderResult.data.id),
@@ -118,12 +138,13 @@ export async function getOrderEmailContext(
       quantity: numberValue(item.quantity),
       lineTotalCents: numberValue(item.line_total_cents),
     })),
-    fiscalDocument: fiscalResult.data
+    fiscalDocument: fiscalDocument
       ? {
-          documentType: stringValue(fiscalResult.data.document_type, "comprobante"),
-          series: stringValue(fiscalResult.data.series) || undefined,
-          number: stringValue(fiscalResult.data.number) || undefined,
+          documentType: stringValue(fiscalDocument.document_type, "comprobante"),
+          series: stringValue(fiscalDocument.series) || undefined,
+          number: stringValue(fiscalDocument.number) || undefined,
           pdfUrl: /^https:\/\//i.test(pdfPath) ? pdfPath : undefined,
+          testMode: Boolean(fiscalDocument.test_mode),
         }
       : undefined,
   };

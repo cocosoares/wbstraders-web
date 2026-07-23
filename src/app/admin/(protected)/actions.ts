@@ -70,6 +70,11 @@ const fiscalDocumentSchema = z.object({
   confirmed: z.boolean(),
 });
 
+const fiscalSandboxIssueSchema = z.object({
+  fiscalDocumentId: z.string().uuid(),
+  confirmation: z.literal("PRUEBA"),
+});
+
 const whatsappReplySchema = z.object({
   conversationId: z.string().uuid(),
   contactId: z.string().uuid(),
@@ -361,6 +366,43 @@ export async function updateFiscalDocumentStatus(
         ? "Rechazo registrado."
         : "Anulación registrada.",
   );
+}
+
+export async function issueSandboxFiscalDocument(
+  _previous: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  if (process.env.FISCAL_SANDBOX_ENABLED?.trim().toLowerCase() !== "true") {
+    return failure("El modo fiscal de prueba no estÃ¡ habilitado en este entorno.");
+  }
+
+  const parsed = fiscalSandboxIssueSchema.safeParse({
+    fiscalDocumentId: formData.get("fiscalDocumentId"),
+    confirmation: formData.get("confirmation"),
+  });
+  if (!parsed.success) {
+    return failure("Escribe PRUEBA para confirmar la emisiÃ³n sin validez tributaria.");
+  }
+
+  const access = await requireAdminAccess();
+  if (access.mode !== "live" || !access.userId) {
+    return failure("Conecta Supabase antes de emitir un comprobante de prueba.");
+  }
+
+  const { data, error } = await getSupabaseAdmin().rpc(
+    "admin_issue_sandbox_fiscal_document",
+    {
+      p_fiscal_document_id: parsed.data.fiscalDocumentId,
+      p_actor_id: access.userId,
+    },
+  );
+  if (error) return failure(fiscalSandboxRpcMessage(error.message));
+
+  const result = Array.isArray(data) ? data[0] : data;
+  const reference = result?.series && result?.number ? ` ${result.series}-${result.number}` : "";
+  revalidatePath("/admin");
+  revalidatePath("/admin/comprobantes");
+  return success(`Comprobante de prueba${reference} emitido. No tiene validez ante SUNAT.`);
 }
 
 export async function queueWhatsAppReply(
@@ -828,6 +870,22 @@ function fiscalRpcMessage(message: string) {
     return "Ese cambio no está permitido desde el estado actual.";
   }
   return "No pudimos actualizar el comprobante. Revisa los datos e inténtalo nuevamente.";
+}
+
+function fiscalSandboxRpcMessage(message: string) {
+  if (message.includes("fiscal_sandbox_not_enabled")) {
+    return "La base fiscal no estÃ¡ en modo de prueba.";
+  }
+  if (message.includes("sandbox_payment_not_approved")) {
+    return "Primero concilia el pago del pedido interno de prueba.";
+  }
+  if (message.includes("sandbox_internal_test_order_required")) {
+    return "Por seguridad, sÃ³lo se emiten pruebas para pedidos creados con el cupÃ³n interno.";
+  }
+  if (message.includes("fiscal_document_not_pending")) {
+    return "Este comprobante ya fue procesado o no admite una emisiÃ³n de prueba.";
+  }
+  return "No pudimos emitir el comprobante de prueba. Revisa la migraciÃ³n fiscal y vuelve a intentarlo.";
 }
 
 function success(message: string): AdminActionState {

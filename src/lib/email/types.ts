@@ -49,6 +49,7 @@ export type OrderEmailContext = {
     series?: string;
     number?: string;
     pdfUrl?: string;
+    testMode?: boolean;
   };
 };
 
