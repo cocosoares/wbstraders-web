@@ -402,9 +402,14 @@ export function CheckoutClient({
               <input type="radio" name="paymentMethod" checked={form.paymentMethod === "manual"} onChange={() => setField("paymentMethod", "manual")} className="mt-1 h-4 w-4 accent-olive-600" />
               <span><strong className="block">Coordinar el pago</strong><span className="text-sm text-ink-600">Crearemos el pedido y te daremos un número antes de continuar por WhatsApp.</span></span>
             </label>
-            {!onlinePaymentEnabled && (
+            {!onlinePaymentEnabled && !testCheckoutEnabled && (
               <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
                 El pago online aún no está habilitado. Tu pedido quedará pendiente hasta que coordinemos y verifiquemos el pago.
+              </p>
+            )}
+            {testCheckoutEnabled && (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
+                Modo de prueba interno activo. Con el código autorizado el pago se simula, no se realiza ningún cobro y el pedido queda aprobado para probar el flujo completo.
               </p>
             )}
           </div>
@@ -424,7 +429,7 @@ export function CheckoutClient({
                 maxLength={64}
               />
               <p className="mt-2 text-sm text-amber-900">
-                Solo para pruebas internas: crea el pedido sin redirigir a una pasarela. El pago seguirá pendiente.
+                Solo para pruebas internas con un correo autorizado. No se realiza ningún cobro: el pedido, el stock y las notificaciones avanzarán como una compra aprobada de prueba.
               </p>
             </div>
           )}
