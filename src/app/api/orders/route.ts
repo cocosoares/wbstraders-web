@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     }
 
     const input = createOrderSchema.parse(body);
-    const testCheckout = hasValidTestCheckoutCoupon(input.testCoupon);
+    const testCheckout = hasValidTestCheckoutCoupon(input.testCoupon, input.customer.email);
     if (input.testCoupon && !testCheckout) {
       return jsonError(422, "TEST_COUPON_INVALID", "El código de prueba no es válido o no está habilitado");
     }
@@ -131,7 +131,20 @@ export async function POST(request: Request) {
     });
 
     let checkoutUrl: string | undefined;
-    if (paymentProvider === "mercadopago") {
+    if (testCheckout) {
+      const { error: testPaymentError } = await db.rpc("confirm_test_checkout_payment", {
+        p_order_id: created.orderId,
+        p_payment_attempt_id: attemptId,
+      });
+      if (testPaymentError) {
+        await failPaymentAttempt(db, attemptId, "test_checkout_confirmation_failed").catch(() => undefined);
+        return jsonError(
+          503,
+          "TEST_CHECKOUT_UNAVAILABLE",
+          "No pudimos confirmar el pedido de prueba. Revisa la configuración e inténtalo nuevamente.",
+        );
+      }
+    } else if (paymentProvider === "mercadopago") {
       try {
         const preference = await createMercadoPagoPreference({
           orderId,
@@ -161,7 +174,7 @@ export async function POST(request: Request) {
       {
         orderId: created.orderId,
         orderNumber: created.orderNumber,
-        status: "pending_payment",
+        status: testCheckout ? "paid" : "pending_payment",
         ...(testCheckout ? { testCheckout: true } : {}),
         ...(checkoutUrl ? { checkoutUrl } : {}),
         accessToken,

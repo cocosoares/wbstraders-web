@@ -248,6 +248,7 @@ export function CheckoutClient({
         orderNumber?: string;
         accessToken?: string;
         checkoutUrl?: string;
+        testCheckout?: boolean;
       };
       if (!response.ok || !data.orderId || !data.accessToken) {
         const apiMessage =
@@ -277,7 +278,7 @@ export function CheckoutClient({
       const query = new URLSearchParams({
         order: data.orderId,
       });
-      window.location.assign(`/pago/pendiente?${query.toString()}`);
+      window.location.assign(`/pago/${data.testCheckout ? "exito" : "pendiente"}?${query.toString()}`);
     } catch (error) {
       setErrors({
         form:
