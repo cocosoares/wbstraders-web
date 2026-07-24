@@ -4,6 +4,7 @@ import { verifyCronBearer } from "@/lib/ycloud/outbox";
 import {
   dispatchPendingWhatsAppOutbox,
 } from "@/lib/whatsapp/outbox";
+import { dispatchWhatsAppOrderNotifications } from "@/lib/whatsapp/order-notifications";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -24,9 +25,15 @@ export async function POST(request: Request) {
   const limit = Number.isFinite(requestedLimit) ? Math.min(10, Math.max(1, requestedLimit)) : 5;
   try {
     const db = getSupabaseAdmin();
-    const result = await dispatchPendingWhatsAppOutbox(db, limit);
-    return NextResponse.json(result, {
-      status: result.finalizationErrors > 0 ? 500 : 200,
+    const [conversations, orders] = await Promise.all([
+      dispatchPendingWhatsAppOutbox(db, limit),
+      dispatchWhatsAppOrderNotifications({ db, limit }),
+    ]);
+    return NextResponse.json({ conversations, orders }, {
+      status:
+        conversations.finalizationErrors > 0 || orders.finalizationErrors > 0
+          ? 500
+          : 200,
       headers: { "Cache-Control": "no-store" },
     });
   } catch {

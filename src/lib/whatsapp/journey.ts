@@ -11,6 +11,8 @@ export type WhatsAppJourneyStage =
   | "promotion_format"
   | "catalog_browse"
   | "recommendation_ready"
+  | "recommendation_adjust"
+  | "checkout_ready"
   | "horeca_business"
   | "horeca_volume"
   | "horeca_handoff"
@@ -27,6 +29,7 @@ export type WhatsAppQualificationData = {
   customerType?: "consumer" | "horeca";
   horecaBusinessType?: "restaurant" | "hotel" | "bar" | "company" | "other";
   horecaVolume?: "6_12" | "13_48" | "49_plus";
+  recommendedProductSlug?: string;
 };
 
 export type WhatsAppJourneyState = {
@@ -47,6 +50,8 @@ const stages = new Set<WhatsAppJourneyStage>([
   "promotion_format",
   "catalog_browse",
   "recommendation_ready",
+  "recommendation_adjust",
+  "checkout_ready",
   "horeca_business",
   "horeca_volume",
   "horeca_handoff",
@@ -89,6 +94,9 @@ function parseQualification(value: unknown): WhatsAppQualificationData | undefin
     ...(customerType ? { customerType } : {}),
     ...(horecaBusinessType ? { horecaBusinessType } : {}),
     ...(horecaVolume ? { horecaVolume } : {}),
+    ...(shortText(source.recommendedProductSlug, 120)
+      ? { recommendedProductSlug: shortText(source.recommendedProductSlug, 120) }
+      : {}),
   };
   return Object.keys(qualification).length ? qualification : undefined;
 }

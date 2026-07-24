@@ -92,6 +92,8 @@ describe("WhatsApp sommelier conversation", () => {
     expect(reply.intent).toBe("recommendation");
     expect(reply.suggestionSlugs).toContain("rn40-malbec");
     expect(reply.journey?.stage).toBe("recommendation_ready");
+    expect(reply.checkoutItems).toBeUndefined();
+    expect(reply.replyButtons?.map((button) => button.id)).toContain("accept_selection");
   });
 
   it("does not reuse an expired recommendation state", () => {
@@ -164,10 +166,64 @@ describe("WhatsApp sommelier conversation", () => {
     });
     expect(reply.intent).toBe("recommendation");
     expect(reply.suggestionSlugs).toContain("1700-msnm-torrontes");
-    expect(reply.checkoutItems).toEqual([{ productId: "1700-torrontes", quantity: 2 }]);
+    expect(reply.checkoutItems).toBeUndefined();
     expect(reply.productImage?.path).toBe("/products/1700-msnm-torrontes-cutout.webp");
     expect(reply.text).toContain("1700 msnm Torrontés");
     expect(reply.text).toContain("S/");
+  });
+
+  it("creates the secure web checkout only after the customer accepts the recommendation", () => {
+    const reply = respondToWhatsApp({
+      message: "accept_selection",
+      journey: {
+        path: "wine",
+        stage: "recommendation_ready",
+        qualification: {
+          occasion: "parrilla y carnes",
+          purchaseFormat: "single",
+          recommendedProductSlug: "rn40-malbec",
+        },
+        updatedAt: new Date().toISOString(),
+      },
+    });
+
+    expect(reply.intent).toBe("recommendation");
+    expect(reply.journey?.stage).toBe("checkout_ready");
+    expect(reply.checkoutItems).toEqual([{ productId: "rn40-malbec", quantity: 1 }]);
+    expect(reply.text).toContain("web segura de WBStraders");
+  });
+
+  it("lets the customer adjust a recommendation without restarting qualification", () => {
+    const change = respondToWhatsApp({
+      message: "change_selection",
+      journey: {
+        path: "wine",
+        stage: "recommendation_ready",
+        qualification: {
+          occasion: "parrilla y carnes",
+          purchaseFormat: "single",
+          recommendedProductSlug: "rn40-malbec",
+        },
+        updatedAt: new Date().toISOString(),
+      },
+    });
+    expect(change.journey?.stage).toBe("recommendation_adjust");
+    expect(change.replyButtons?.map((button) => button.id)).toEqual([
+      "adjust_cheaper",
+      "adjust_premium",
+      "adjust_style",
+    ]);
+
+    const cheaper = respondToWhatsApp({
+      message: "adjust_cheaper",
+      journey: {
+        ...change.journey!,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+    expect(cheaper.intent).toBe("recommendation");
+    expect(cheaper.journey?.stage).toBe("recommendation_ready");
+    expect(cheaper.leadData?.occasion).toBe("parrilla y carnes");
   });
 
   it("answers delivery questions with the configured zone data", () => {

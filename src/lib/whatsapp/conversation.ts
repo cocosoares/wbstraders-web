@@ -69,6 +69,18 @@ const FORMAT_MENU: WhatsAppReplyButton[] = [
   { id: "format_case", text: "Caja / surtido" },
 ];
 
+const RECOMMENDATION_MENU: WhatsAppReplyButton[] = [
+  { id: "accept_selection", text: "Comprar selección 🛒" },
+  { id: "change_selection", text: "Cambiar opción 🔄" },
+  { id: "human_handoff", text: "Hablar con asesor" },
+];
+
+const ADJUSTMENT_MENU: WhatsAppReplyButton[] = [
+  { id: "adjust_cheaper", text: "Más económico" },
+  { id: "adjust_premium", text: "Más premium" },
+  { id: "adjust_style", text: "Otro estilo" },
+];
+
 const BUDGET_MENU: WhatsAppReplyButton[] = [
   { id: "budget_100", text: "Hasta S/100" },
   { id: "budget_250", text: "S/100–250" },
@@ -123,6 +135,12 @@ const BUTTON_SELECTION_TEXT: Record<string, string> = {
   "budget 100": "hasta s/100",
   "budget 250": "s/100-250",
   "budget premium": "mas de s/250",
+  "accept selection": "comprar seleccion",
+  "change selection": "cambiar opcion",
+  "adjust cheaper": "mas economico",
+  "adjust premium": "mas premium",
+  "adjust style": "otro estilo",
+  "human handoff": "hablar con asesor",
 };
 
 function normalize(value: string) {
@@ -391,8 +409,40 @@ function requestedQuantity(
   return product.tiers.find((tier) => tier.minQty >= 6)?.minQty ?? product.tiers.at(-1)?.minQty ?? 1;
 }
 
+function adjustedProductSlug(
+  lead: WhatsAppLeadData,
+  direction: "cheaper" | "premium",
+): string | undefined {
+  const current = lead.recommendedProductSlug
+    ? PRODUCTS_BY_SLUG.get(lead.recommendedProductSlug)
+    : undefined;
+  if (!current) return undefined;
+  const currentPrice = tierUnitCents(current.tiers[0]);
+  const candidates = Array.from(PRODUCTS_BY_SLUG.values())
+    .filter((product) => product.slug !== current.slug)
+    .filter((product) => {
+      if (lead.wineStyle === "tinto") return product.type === "Tinto";
+      if (lead.wineStyle === "blanco") return product.type === "Blanco";
+      if (lead.wineStyle === "espumante") return product.type === "Espumante";
+      return true;
+    })
+    .map((product) => ({ product, price: tierUnitCents(product.tiers[0]) }))
+    .filter(({ price }) => direction === "cheaper" ? price < currentPrice : price > currentPrice)
+    .sort((a, b) =>
+      direction === "cheaper" ? b.price - a.price : a.price - b.price,
+    );
+  return candidates[0]?.product.slug;
+}
+
 function recommendationReply(context: string, lead: WhatsAppLeadData): WhatsAppBotReply {
-  const suggestionSlugs = chooseSuggestions(context, lead)
+  const selectedSlug =
+    lead.recommendedProductSlug && PRODUCTS_BY_SLUG.has(lead.recommendedProductSlug)
+      ? lead.recommendedProductSlug
+      : undefined;
+  const suggestionSlugs = [
+    ...(selectedSlug ? [selectedSlug] : []),
+    ...chooseSuggestions(context, lead),
+  ]
     .filter((slug, index, values) => PRODUCTS_BY_SLUG.has(slug) && values.indexOf(slug) === index)
     .slice(0, 2);
   const primary = PRODUCTS_BY_SLUG.get(suggestionSlugs[0] ?? "");
@@ -448,7 +498,7 @@ function recommendationReply(context: string, lead: WhatsAppLeadData): WhatsAppB
       `💰 ${quantity === 1 ? "1 botella" : `Selección de ${quantity} botellas`}: *${formatPEN(totalCents)}* (${formatPEN(unitCents)} c/u).`,
     ].join("\n") + alternativeText + "\n\n🛒 Dejé esta selección lista para que la revises y completes tus datos de entrega.",
     suggestionSlugs,
-    checkoutItems: [{ productId: primary.id, quantity }],
+    replyButtons: RECOMMENDATION_MENU,
     actionButtons,
     ...(primary.image
       ? {
@@ -459,9 +509,46 @@ function recommendationReply(context: string, lead: WhatsAppLeadData): WhatsAppB
           },
         }
       : {}),
-    footer: "Precio publicado · Delivery en Lima · Para recibir novedades, escribe RECIBIR OFERTAS.",
-    leadData: lead,
-    journey: journey("wine", "recommendation_ready", lead),
+    footer: "Puedes comprar la selección o escribir CAMBIAR para ajustar precio o estilo.",
+    leadData: { ...lead, recommendedProductSlug: primary.slug },
+    journey: journey("wine", "recommendation_ready", {
+      ...lead,
+      recommendedProductSlug: primary.slug,
+    }),
+  };
+}
+
+function checkoutReadyReply(
+  lead: WhatsAppLeadData,
+  context: string,
+): WhatsAppBotReply {
+  const product =
+    (lead.recommendedProductSlug
+      ? PRODUCTS_BY_SLUG.get(lead.recommendedProductSlug)
+      : undefined) ??
+    PRODUCTS_BY_SLUG.get(chooseSuggestions(context, lead)[0] ?? "");
+  if (!product) return recommendationReply(context, lead);
+  const quantity = requestedQuantity(lead.purchaseFormat, product);
+
+  return {
+    intent: "recommendation",
+    text: `¡Excelente elección! 🙌 Preparé tu selección de *${product.name}*. Toca el botón para revisar cantidades, datos de entrega, comprobante y pago en la web segura de WBStraders.`,
+    suggestionSlugs: [product.slug],
+    checkoutItems: [{ productId: product.id, quantity }],
+    actionButtons: [
+      {
+        type: "url",
+        id: `product_${product.slug}`,
+        text: "Revisar el vino",
+        url: `/producto/${product.slug}`,
+      },
+    ],
+    footer: "La compra y el pago se completan únicamente en la web oficial de WBStraders.",
+    leadData: { ...lead, recommendedProductSlug: product.slug },
+    journey: journey("wine", "checkout_ready", {
+      ...lead,
+      recommendedProductSlug: product.slug,
+    }),
   };
 }
 
@@ -615,6 +702,68 @@ export function respondToWhatsApp(args: {
 
   const catalog = catalogReply(normalizedMessage);
   if (catalog) return catalog;
+
+  const savedLead = activeJourney?.qualification ?? {};
+  if (
+    activeJourney?.stage === "recommendation_ready" &&
+    /\b(comprar seleccion|lo quiero|me gusta|comprar|continuar)\b/.test(normalizedMessage)
+  ) {
+    return checkoutReadyReply(savedLead, normalizedContext);
+  }
+
+  if (
+    activeJourney?.stage === "recommendation_ready" &&
+    /\b(cambiar opcion|otra opcion|no me convence|ver otro)\b/.test(normalizedMessage)
+  ) {
+    return {
+      intent: "qualification",
+      text: "Claro 👍 No necesitas empezar de nuevo. ¿Qué quieres cambiar de la recomendación?",
+      suggestionSlugs: [],
+      replyButtons: ADJUSTMENT_MENU,
+      footer: "Mantendré la comida, ocasión y cantidad que ya me indicaste.",
+      leadData: savedLead,
+      journey: journey("wine", "recommendation_adjust", savedLead),
+    };
+  }
+
+  if (
+    activeJourney?.stage === "recommendation_adjust" &&
+    /\b(mas economico|más económico)\b/.test(normalizedMessage)
+  ) {
+    const recommendedProductSlug = adjustedProductSlug(savedLead, "cheaper");
+    return recommendationReply(normalizedContext, {
+      ...savedLead,
+      ...(recommendedProductSlug ? { recommendedProductSlug } : { budget: "under_100" }),
+    });
+  }
+
+  if (
+    activeJourney?.stage === "recommendation_adjust" &&
+    /\b(mas premium|más premium)\b/.test(normalizedMessage)
+  ) {
+    const recommendedProductSlug = adjustedProductSlug(savedLead, "premium");
+    return recommendationReply(normalizedContext, {
+      ...savedLead,
+      ...(recommendedProductSlug ? { recommendedProductSlug } : { budget: "over_250" }),
+    });
+  }
+
+  if (
+    activeJourney?.stage === "recommendation_adjust" &&
+    /\b(otro estilo|cambiar estilo)\b/.test(normalizedMessage)
+  ) {
+    const leadWithoutStyle = { ...savedLead };
+    delete leadWithoutStyle.wineStyle;
+    delete leadWithoutStyle.recommendedProductSlug;
+    return {
+      intent: "qualification",
+      text: "Perfecto. ¿Qué estilo prefieres probar ahora?",
+      suggestionSlugs: [],
+      replyButtons: STYLE_MENU,
+      leadData: leadWithoutStyle,
+      journey: journey("wine", "wine_occasion", leadWithoutStyle),
+    };
+  }
 
   const detectedLead: WhatsAppLeadData = {
     occasion: detectOccasion(normalizedMessage) ?? detectOccasion(normalizedContext),

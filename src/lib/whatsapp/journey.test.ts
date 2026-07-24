@@ -26,6 +26,27 @@ describe("WhatsApp journey", () => {
     expect(parseWhatsAppJourney({ path: "unknown", stage: "anything" })).toBeUndefined();
   });
 
+  it("persists only the product slug needed to resume an accepted recommendation", () => {
+    expect(
+      parseWhatsAppJourney({
+        path: "wine",
+        stage: "recommendation_ready",
+        qualification: {
+          occasion: "parrilla y carnes",
+          recommendedProductSlug: "rn40-malbec",
+          ignoredSecret: "no",
+        },
+      }),
+    ).toEqual({
+      path: "wine",
+      stage: "recommendation_ready",
+      qualification: {
+        occasion: "parrilla y carnes",
+        recommendedProductSlug: "rn40-malbec",
+      },
+    });
+  });
+
   it("expires a journey after thirty minutes", () => {
     expect(
       isWhatsAppJourneyFresh({
