@@ -236,7 +236,7 @@ export const PRODUCTS: Product[] = [
     badge: "93–95 pts.",
     regularUnitCents: toCents(208.9),
     pricingGroup: "geografia",
-    image: "/products/geografia-extraordinaria-blancas-de-uco.webp",
+    image: "/products/geografia-extraordinaria-blancas-clean.webp",
     visualTone: "ochre",
     tiers: [
       t(1, 134.9, "Precio oferta"),
@@ -262,7 +262,7 @@ export const PRODUCTS: Product[] = [
     badge: "93–95 pts.",
     regularUnitCents: toCents(208.9),
     pricingGroup: "geografia",
-    image: "/products/geografia-extraordinaria-tintas-de-uco.webp",
+    image: "/products/geografia-extraordinaria-tintas-clean.webp",
     visualTone: "lavender",
     tiers: [
       t(1, 134.9, "Precio oferta"),
